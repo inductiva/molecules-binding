@@ -1,11 +1,10 @@
 [![Python package](https://github.com/inductiva/molecules-binding/actions/workflows/python-package.yml/badge.svg)](https://github.com/inductiva/molecules-binding/actions/workflows/python-package.yml)
 
-[![Documentation Status](https://readthedocs.com/projects/inductiva-research-labs-inductiva/molecules-binding/badge/?version=latest&token=a7a7344c5bc9e511ca715449f94612e4bb7c2dff4c90931778b9c85dbbf5480c)](https://inductiva-research-labs-inductiva/molecules-binding.readthedocs-hosted.com/en/latest/?badge=latest)
+# Geometric Deep Learning for Molecules Binding
 
-# Start a project
-
-Use this template to generate a repository for your new project. By doing so you
-will quickly have access to a couple of tools we've already set up for you.
+This repository contains the source code and documentation related with Sofia Guerreiro's 
+research on Geometric Deep Learning for molecules. In particular, we will study the interaction
+and binding between pairs of molecules.
 
 ## Python
 
@@ -87,58 +86,6 @@ of common best practices:
   test file (e.g. `example_test.py`) stays in the same directory next to the
   component it tests (e.g. `example.py`).
 
-## Documentation
-
-We use [Sphinx](https://www.sphinx-doc.org/) to generate documentation to our
-projects. The documentation files can be written using either Markdown or
-reStructuredText syntax and are stored in the `docs` directory. See
-[`docs/index.md`](docs/index.md) for a collection of simple examples to get you
-started including math formulas and code snippets in your documentation.
-
-If you want to generate the documentation locally, simply install the
-dependencies via `pip`:
-
-```bash
-pip install -r docs/requirements.txt
-```
-
-and run
-
-```bash
-sphinx-build -b html docs docs/_build
-```
-
-in your base directory to build the documentation in `docs/_build`.
-
-To serve the documentation locally and automatically build it with new changes,
-install the `sphinx-autobuild` package,
-
-```bash
-pip install sphinx-autobuild
-```
-
-and run in your base directory
-
-```bash
-sphinx-autobuild -b html docs docs/_build
-```
-
-This will serve the documentation at <http://127.0.0.1:8000> and automatically
-update it when you save changes to the documentation files.
-
-The documentation may also be made available on
-[Read The Docs](https://readthedocs.org/) for configured repositories. When set
-up, this integration will build and deploy the documentation on each commit to
-the `main` branch.
-
-See the documentation for the start-a-project repo at:
-
-https://inductiva-research-labs-start-a-project.readthedocs-hosted.com/en/latest/
-
-Apart from documentation files, we also prepare README files using Markdown
-syntax to present short introductions of the projects. This README is one such
-example.
-
 
 ## Conda Environments
 
@@ -149,11 +96,11 @@ Make sure the first line of the conda.yml file contains a name related to
 your project, such as:
 
 ```
-name: startaproject_env
+name: binding_env
 ```
 
 Note: If you are starting a new project from this template repo, it might work 
-automatically for you, because we use the placeholder `name: inductiva/molecules-binding_env`
+automatically for you, because we use the placeholder `name: binding_env`
 that gets auto-filled with the repo name.
 
 Now, if you have conda installed, just run:
@@ -166,7 +113,7 @@ This will install python 3.9, pylint, yapf, pytest, sphinx, and all the
 package requirements, and you can now activate that environment with:
 
 ```bash
-conda activate startaproject_env
+conda activate binding_env
 ```
 
 And you are good to go!
