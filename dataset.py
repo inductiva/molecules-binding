@@ -20,7 +20,8 @@ class PDBDataset(torch.utils.data.Dataset):
         
         self.pdb_files = pdb_files
         
-        parser = PDBParser(QUIET=True)
+        # Some errors about not recognizing TER are occuring
+        parser = PDBParser(QUIET=True) 
         self.coordinates = []
         maxlen=0
         self.targets = []
