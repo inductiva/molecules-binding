@@ -14,17 +14,15 @@ from rdkit import Chem
 
 unity_conv = {'mM': -3, 'uM': -6, 'nM': -9, 'pM': -12,'fM': -15}
 
-diri = '../../../datasets'
+# for PL problem
+mydir_aff = '../../../datasets/index/INDEX_general_PL_data.2020'
+# for PP problem
+# mydir_aff = '../../../datasets/index/INDEX_general_PP.2020'
 
-dataset_dic_aff = {'PL': '/index/INDEX_general_PL_data.2020',
-               'PP': '/index/INDEX_general_PP.2020'}
-
-def get_affinities(dataset):
-    if dataset not in ['PP','PL']:
-        raise ValueError('argument must be either PP or PL')
+def get_affinities(directory):
     
     aff_dict = {}
-    with open(diri + dataset_dic_aff[dataset], 'r') as f:
+    with open(directory, 'r') as f:
         for line in f:
             
             if line[0]!='#':
@@ -33,70 +31,69 @@ def get_affinities(dataset):
             
                 pdb_id = fields[0]
                 
-                if dataset == 'PL':
-                    log_aff = float(fields[3])
-                    aff_str = fields[4]
+                log_aff = float(fields[3])
+                
+                aff_str = fields[4]
                     
-                elif dataset == 'PP':
-                    aff_str = fields[3]
+                # for PP problem would be aff_str = fields[3]
                 
-                aff_unity = re.split('[=<>~]+', aff_str)
+                aff_tokens = re.split('[=<>~]+', aff_str)
                 
+                assert len(aff_tokens) == 2
+                
+                label, aff_unity = aff_tokens
+                
+                assert label in ['Kd', 'Ki', 'IC50']
+                
+                affinity_value =  float(aff_unity[:-2])
+                
+                exponent = unity_conv[aff_unity[-2:]]
                 # aff_unity - list, first element is Kd, Ki or IC50, second is aff
                 # first characters contain value (example: 49)
                 # last two characters of aff_unity contain unity (example: uM)
                 
                 # convert all values of affinity to M
-                aff = float(aff_unity[1][:-2])*10**unity_conv[aff_unity[1][-2:]]
+                aff = float(affinity_value)*10**exponent
                 
-                if dataset == 'PP':
-                    log_aff = float(-np.log10(aff))
+                # for PP problem log_aff = float(-np.log10(aff))
                     
                 # given pdb_id returns biding type, aff and -log(aff)
                 
-                aff_dict[pdb_id] = [aff_unity[0], aff, log_aff]
+                aff_dict[pdb_id] = [label, aff, log_aff]
             
     return aff_dict
 
 
-dataset_dic = {
-    'PLnotrefined': '/v2020-other-PL',
-    'PP': '/PP',
-    'PL': '/refined-set'
-}
+mydir = '../../../datasets/PP'
+# mydir = '/refined-set'
 
 # creates a list, where the first element is the id of the compound,
 # the second is the location of the pdb file of the corresponding compound
 
 
-def read_dataset(dataset):
-
-    if dataset not in ['PP', 'PLnotrefined', 'PL']:
-        raise ValueError('argument must be either PP, PLnotrefined or PL')
+def read_dataset(directory):
 
     pdb_files = []
-    directory = diri + dataset_dic[dataset]
 
-    if dataset == 'PL' or dataset == 'PLrefined':
 
-        for filename in os.listdir(directory):
-            f = os.path.join(directory, filename)
-            files = os.listdir(f)
-            pdb_id = filename
-             
-            pdb_files += [(pdb_id, os.path.join(f, files[3]),
-                           os.path.join(f, files[1]))]
+    for filename in os.listdir(directory):
+        f = os.path.join(directory, filename)
+        files = os.listdir(f)
+        pdb_id = filename
+         
+        pdb_files += [(pdb_id, os.path.join(f, files[3]),
+                       os.path.join(f, files[1]))]
 
-    if dataset == 'PP':
+    # for PP case:
 
-        for filename in os.listdir(directory):
+#     for filename in os.listdir(directory):
 
-            pdb_files += [(filename[:4], os.path.join(directory, filename))]
+#         pdb_files += [(filename[:4], os.path.join(directory, filename))]
 
     return pdb_files
 
 
-aff_dict = get_affinities('PL')
+aff_dict = get_affinities(mydir_aff)
 
 
 class PDBDataset(torch.utils.data.Dataset):
