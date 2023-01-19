@@ -14,15 +14,17 @@ from rdkit import Chem
 
 unity_conv = {'mM': -3, 'uM': -6, 'nM': -9, 'pM': -12,'fM': -15}
 
-dataset_dic_aff = {'PL': '../../datasets/index/INDEX_general_PL_data.2020',
-               'PP': '../../datasets/index/INDEX_general_PP.2020'}
+diri = '../../../datasets'
+
+dataset_dic_aff = {'PL': '/index/INDEX_general_PL_data.2020',
+               'PP': '/index/INDEX_general_PP.2020'}
 
 def get_affinities(dataset):
     if dataset not in ['PP','PL']:
         raise ValueError('argument must be either PP or PL')
     
     aff_dict = {}
-    with open(dataset_dic_aff[dataset], 'r') as f:
+    with open(diri + dataset_dic_aff[dataset], 'r') as f:
         for line in f:
             
             if line[0]!='#':
@@ -58,9 +60,9 @@ def get_affinities(dataset):
 
 
 dataset_dic = {
-    'PLnotrefined': '../../datasets/v2020-other-PL',
-    'PP': '../../datasets/PP',
-    'PL': '../../datasets/refined-set'
+    'PLnotrefined': '/v2020-other-PL',
+    'PP': '/PP',
+    'PL': '/refined-set'
 }
 
 # creates a list, where the first element is the id of the compound,
@@ -73,7 +75,7 @@ def read_dataset(dataset):
         raise ValueError('argument must be either PP, PLnotrefined or PL')
 
     pdb_files = []
-    directory = dataset_dic[dataset]
+    directory = diri + dataset_dic[dataset]
 
     if dataset == 'PL' or dataset == 'PLrefined':
 
@@ -109,51 +111,48 @@ class PDBDataset(torch.utils.data.Dataset):
             path to sdf file describing ligand
         """
         
-        self.pdb_files = pdb_files
+        self.dataset_len = len(pdb_files)
         
         parser = PDBParser(QUIET=True)
         
-        maxlenp = 0
-        maxlenl = 0
+        max_len_p = 0
+        max_len_l = 0
         
         data = []
         
-        for pdb_file in pdb_files:
+        for comp_name, path_protein, path_ligand in pdb_files:
             
-            structure_pro = parser.get_structure(pdb_file[0], pdb_file[1])
+            structure_pro = parser.get_structure(comp_name, path_protein)
             coord_p = [atom.get_coord() for atom in structure_pro.get_atoms()]
             
-            if len(coord_p) > maxlenp:
-                maxlenp = len(coord_p)
+            max_len_p = max(max_len_p, len(coord_p))
             
-            structure_lig = Chem.SDMolSupplier(pdb_file[2])[0]
+            structure_lig = Chem.SDMolSupplier(path_ligand,sanitize=False)[0]
             conf_lig = structure_lig.GetConformer()
             coord_l = conf_lig.GetPositions()
             
-            if len(coord_l) > maxlenl:
-                maxlenl = len(coord_l)
+            max_len_l = max(max_len_l, len(coord_l))
             
             data += [(torch.tensor(coord_p), torch.tensor(coord_l),
-                     aff_dict[pdb_file[0]][2])[0]]
+                     aff_dict[comp_name][2])]
         
         self.data = data
-        self.maxlenp = maxlenp
-        self.maxlenl = maxlenl
+        self.max_len_p = max_len_p
+        self.max_len_l = max_len_l
         
     
     def __len__(self):
-        return len(self.pdb_files)
+        return self.dataset_len
     
     def __getitem__(self, index):
-        
         coords_p, coords_l, affinity = self.data[index]
         
         coords_p = torch.nn.functional.pad(
-            coords_p,(0,0,0, self.maxlenp - coords_p.shape[0]), 
+            coords_p,(0,0,0, self.max_len_p - coords_p.shape[0]), 
             mode = 'constant', value = None)
         
         coords_l = torch.nn.functional.pad(
-            coords_l,(0,0,0, self.maxlenl - coords_l.shape[0]), 
+            coords_l,(0,0,0, self.max_len_l - coords_l.shape[0]), 
             mode = 'constant', value = None)
         
         return torch.flatten(
