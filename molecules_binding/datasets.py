@@ -64,8 +64,8 @@ def get_affinities(directory):
     return aff_dict
 
 
-mydir = '../../../datasets/PP'
-# mydir = '/refined-set'
+# mydir = '../../../datasets/PP'
+mydir = '../../../datasets/refined-set'
 
 # creates a list, where the first element is the id of the compound,
 # the second is the location of the pdb file of the corresponding compound
@@ -81,7 +81,7 @@ def read_dataset(directory):
         files = os.listdir(f)
         pdb_id = filename
          
-        pdb_files += [(pdb_id, os.path.join(f, files[3]),
+        pdb_files += [(pdb_id, os.path.join(f, files[2]),
                        os.path.join(f, files[1]))]
 
     # for PP case:
@@ -132,12 +132,11 @@ class PDBDataset(torch.utils.data.Dataset):
             
             data += [(torch.tensor(coord_p), torch.tensor(coord_l),
                      aff_dict[comp_name][2])]
-        
+            
         self.data = data
         self.max_len_p = max_len_p
         self.max_len_l = max_len_l
         
-    
     def __len__(self):
         return self.dataset_len
     
