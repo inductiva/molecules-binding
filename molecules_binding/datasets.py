@@ -93,12 +93,12 @@ def read_dataset(directory):
     return pdb_files
 
 
-aff_dict = get_affinities(mydir_aff)
+# aff_dict = get_affinities(mydir_aff)
 
 
 class PDBDataset(torch.utils.data.Dataset):
     
-    def __init__(self, pdb_files):
+    def __init__(self, pdb_files, aff_dict):
         
         """
         Args:
