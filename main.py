@@ -6,46 +6,52 @@ Created on Fri Jan 13 17:46:38 2023
 """
 import torch
 import torch.nn as nn
-from findingaffinity import get_affinities
-from creatingdataset import read_dataset
-from pdbdataset import PDBDataset
+from molecules_binding.datasets import read_dataset
+from molecules_binding.datasets import get_affinities
+from molecules_binding.datasets import PDBDataset
 from MLP import MLP
 import matplotlib.pyplot as plt
 
-# for PP binding
+# for PL binding
 
-aff_dict = get_affinities('PP')
-pdb_files = read_dataset('PP')[:20]
 
-dataset = PDBDataset(pdb_files)
+mydir_aff = '../../datasets/index/INDEX_general_PL_data.2020'
+mydir = '../../datasets/refined-set'
 
-dataloader = torch.utils.data.DataLoader(dataset, batch_size=5, shuffle=True)
+aff_dict = get_affinities(mydir_aff)
+pdb_files = read_dataset(mydir)
+dataset = PDBDataset(pdb_files, aff_dict)
 
-model = MLP(9932*3, 3000, 1)
+dataloader = torch.utils.data.DataLoader(dataset, batch_size=30, shuffle=True)
+
+input_dim = len(dataset[0][0])
+hidden_dim = 15
+output_dim = 1
+model = MLP(input_dim, hidden_dim, output_dim)
 mse_loss = nn.MSELoss()
-optimizer = torch.optim.Adam(model.parameters(), lr=0.1)
-num_epochs = 10
+optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
+num_epochs = 70
 loss_values = []
 
 
+loss_values = []
 for epoch in range(num_epochs):
-    loss_epoch = []
-    for i, (inputs, targets) in enumerate(dataloader):
+    epoch_loss = 0
+    for inputs, targets in dataloader:
         # Forward pass
         outputs = model(inputs)
-        
         loss = mse_loss(outputs, torch.unsqueeze(targets,-1))
-        loss_epoch.append(loss)
-        
+        epoch_loss += loss.item()
+
         # Backward and optimize
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
-    loss_values.append(sum(loss_epoch)/len(loss_epoch))
+    loss_values.append(epoch_loss / len(dataloader))
     
 print('training complete')
 
-fig, ax1 = plt.subplots(1, figsize=(12, 6), sharex=True)
-
-ax1.plot([i.detach().numpy() for i in loss_values][2:])
-ax1.set_ylabel("training loss")
+plt.plot(loss_values)
+plt.xlabel('Epoch')
+plt.ylabel('Loss')
+plt.show()
