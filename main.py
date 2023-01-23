@@ -22,7 +22,11 @@ aff_dict = get_affinities(mydir_aff)
 pdb_files = read_dataset(mydir)
 dataset = PDBDataset(pdb_files, aff_dict)
 
-dataloader = torch.utils.data.DataLoader(dataset, batch_size=30, shuffle=True)
+train_size = int(0.8 * len(dataset))
+test_size = len(dataset) - train_size
+train_dataset, test_dataset = torch.utils.data.random_split(dataset, [train_size, test_size])
+
+dataloader = torch.utils.data.DataLoader(train_dataset, batch_size=30, shuffle=True)
 
 input_dim = len(dataset[0][0])
 hidden_dim = 15
@@ -55,3 +59,12 @@ plt.plot(loss_values)
 plt.xlabel('Epoch')
 plt.ylabel('Loss')
 plt.show()
+
+with torch.no_grad():
+    val_losses = []
+    model.eval()
+    for inputs, targets in test_dataset:
+        y_pred = model(inputs)
+        val_loss = mse_loss(y_pred[0], torch.tensor(targets))
+        val_losses.append(val_loss)
+print(sum(val_losses) / len(val_losses))
