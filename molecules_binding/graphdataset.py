@@ -12,6 +12,12 @@ import torch
 from rdkit import Chem
 
 from datasets import get_affinities
+
+from graphein.protein.config import ProteinGraphConfig
+from graphein.protein.graphs import construct_graph
+from graphein.protein.edges.atomic import add_atomic_edges
+from graphein.protein.visualisation import plotly_protein_structure_graph
+
 # from datasets import read_dataset
 
 mydir_aff = "../../../datasets/index/INDEX_general_PL_data.2020"
@@ -52,22 +58,29 @@ class GraphDataset(Dataset):
         aff_dict = get_affinities(mydir_aff)
 
         data_list = []
+        
+        config = ProteinGraphConfig()
+        params_to_change = {"granularity": "atom", 
+                            "edge_construction_functions": [add_atomic_edges]}
+        config = ProteinGraphConfig(**params_to_change)
 
         for comp_name, path_protein, path_ligand in pdb_files:
-
+            
+            # Ligand
             structure_lig = Chem.SDMolSupplier(path_ligand, sanitize=False)[0]
             conf_lig = structure_lig.GetConformer()
-            coord_ligand = torch.tensor(conf_lig.GetPositions())
-
+            coords_ligand = torch.as_tensor(conf_lig.GetPositions())
+            
             atoms_ligand_e = [
                 atom.GetSymbol() for atom in structure_lig.GetAtoms()
             ]
+            num_atoms_ligand = len(atoms_ligand_e)
             atoms_ligand_n = [ele2num[atomtype] for atomtype in atoms_ligand_e]
-            atoms_ligand = np.zeros((len(atoms_ligand_n), num_features))
+            atoms_ligand = np.zeros((num_atoms_ligand, num_features))
 
-            for i, t in enumerate(atoms_ligand_n):
-                atoms_ligand[i, t] = 1.0
-            atoms_ligand = torch.tensor(atoms_ligand)
+            atoms_ligand = np.zeros((num_atoms_ligand, num_features))
+            atoms_ligand[np.arange(num_atoms_ligand), atoms_ligand_n] = 1
+            atoms_ligand = torch.as_tensor(atoms_ligand)
 
             edges_directed = [[bond.GetBeginAtomIdx(),
                                bond.GetEndAtomIdx()]
@@ -76,13 +89,53 @@ class GraphDataset(Dataset):
             for edge in edges_directed:
                 i, j = edge
                 edges_bi += [[i, j], [j, i]]
-            rows = [edge[0] for edge in edges_bi]
-            cols = [edge[1] for edge in edges_bi]
-            edges = torch.tensor([rows, cols])
-
-            data_list += [(Data(x=atoms_ligand,
+            rows_l = [edge[0] for edge in edges_bi]
+            cols_l = [edge[1] for edge in edges_bi]
+            edges_ligand = torch.tensor([rows_l, cols_l])
+            
+            # Protein
+            g = construct_graph(config=config, pdb_path=path_protein)
+            nodes_dic = dict()
+            
+            for i, (ident, d) in enumerate(g.nodes(data=True)):
+                nodes_dic[ident] = [i + num_atoms_ligand, 
+                                    d['element_symbol'], d['coords']]
+            
+            rows_p = []
+            cols_p = []
+            edge_attr_p = []
+            for u, v, a in g.edges(data=True):
+                id1 = nodes_dic[u][0]
+                id2 = nodes_dic[v][0]
+                
+                rows_p += [id1, id2]
+                cols_p += [id2, id1]
+                
+                edge_attr_p += [[a['bond_length'], a['kind']],
+                                [a['bond_length'], a['kind']]]
+            
+            edges_protein = torch.as_tensor([rows_p, cols_p])
+            nodes_list = list(nodes_dic.values())
+            coords_protein = torch.as_tensor(
+                [attr[2].tolist() for attr in nodes_list])
+            
+            atoms_protein_e = [attr[1] for attr in nodes_list]
+            atoms_protein_n = [ele2num[atomtype] 
+                               for atomtype in atoms_protein_e]
+            
+            atoms_protein = np.zeros((len(atoms_protein_n), num_features))
+            atoms_protein[np.arange(len(atoms_protein_n)), atoms_protein_n] = 1
+            atoms_protein = torch.as_tensor(atoms_protein)
+            
+            # Graph Protein + Ligand
+            
+            atoms = torch.cat((atoms_ligand,atoms_protein))
+            coords = torch.cat((coords_ligand,coords_protein))
+            edges = torch.cat((edges_ligand, edges_protein), dim=1)
+            
+            data_list += [(Data(x=atoms,
                                 edge_index=edges,
-                                pos=coord_ligand), aff_dict[comp_name][2])]
+                                pos=coords), aff_dict[comp_name][2])]
 
         self.data_list = data_list
 
@@ -90,9 +143,9 @@ class GraphDataset(Dataset):
         return self.dataset_len
 
     def __getitem__(self, index):
-        graph_ligand, affinity = self.data_list[index]
+        graph, affinity = self.data_list[index]
 
-        return torch.tensor(graph_ligand, affinity)
+        return torch.tensor(graph, affinity)
 
 
 # Create the dataset object
