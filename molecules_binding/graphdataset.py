@@ -5,7 +5,7 @@ Created on Thu Jan 26 15:33:28 2023
 @author: anaso
 """
 from torch_geometric.data import Data, Dataset
-# from torch_geometric.loader import DataLoader
+from torch_geometric.loader import DataLoader
 
 import numpy as np
 import torch
@@ -17,7 +17,8 @@ from graphein.protein.config import ProteinGraphConfig
 from graphein.protein.graphs import construct_graph
 from graphein.protein.edges.atomic import add_atomic_edges
 
-# from datasets import read_dataset
+from datasets import read_dataset
+from torch import nn
 
 mydir_aff = "../../../datasets/index/INDEX_general_PL_data.2020"
 directory = "../../../datasets/refined-set"
@@ -145,11 +146,37 @@ class GraphDataset(Dataset):
     def __getitem__(self, index):
         graph, affinity = self.data_list[index]
 
-        return torch.tensor(graph, affinity)
+        return [graph, np.float32(affinity)]
 
 
 # Create the dataset object
+pdb_files = read_dataset(directory)
+dataset = GraphDataset(pdb_files[:5], mydir_aff)
+data_loader = DataLoader(dataset, batch_size=2, shuffle=True)
 
-# pdb_files = read_dataset(directory)
-# dataset = GraphDataset(pdb_files, mydir_aff)
-# data_loader = DataLoader(dataset, batch_size=32, shuffle=True)
+
+from modelGraph import GCN
+
+input_dim = num_features
+hidden_dim = 15
+output_dim = 1
+mse_loss = nn.MSELoss()
+num_epochs = 70
+loss_values = []
+
+# device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+model = GCN(input_dim, hidden_dim)# .to(device)
+optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
+
+model.train()
+for epoch in range(5):
+    epoch_loss = 0
+    for inputs, targets in data_loader:
+        print(inputs, targets, torch.unsqueeze(targets,-1))
+        optimizer.zero_grad()
+        
+        outputs = model(inputs)
+        loss = mse_loss(outputs,  torch.unsqueeze(targets,-1))
+        loss.backward()
+        optimizer.step()
+    loss_values.append(epoch_loss / len(data_loader))
