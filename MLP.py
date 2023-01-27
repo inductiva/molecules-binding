@@ -5,13 +5,13 @@ Created on Fri Jan 13 17:55:01 2023
 @author: anaso
 """
 
-import torch.nn as nn
+from torch import nn
 
 
 class MLP(nn.Module):
-
+    """ Simple Multilayer perceptron """
     def __init__(self, input_size, hidden_size, output_size):
-        super(MLP, self).__init__()
+        super().__init__()
         self.fc1 = nn.Linear(input_size, hidden_size)
         self.relu = nn.ReLU()
         # self.tanh = nn.Tanh()

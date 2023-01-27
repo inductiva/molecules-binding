@@ -5,20 +5,31 @@ Created on Fri Jan 13 17:46:38 2023
 @author: anaso
 """
 import torch
-import torch.nn as nn
+from torch import nn
 from molecules_binding.datasets import read_dataset
 from molecules_binding.datasets import get_affinities
 from molecules_binding.datasets import PDBDataset
-from MLP import MLP
+from mlp import MLP
 import matplotlib.pyplot as plt
 
+# from absl import app
+from absl import flags
+# from absl import logging
+import sys
+
+flags.DEFINE_string('aff_dir',
+                    '../../datasets/index/INDEX_general_PL_data.2020',
+                    'specify the path to the index of the dataset')
+
+flags.DEFINE_string('data_dir', '../../datasets/refined-set',
+                    'specify the path to the dataset')
+
+FLAGS = flags.FLAGS
+FLAGS(sys.argv)
 # for PL binding
 
-mydir_aff = '../../datasets/index/INDEX_general_PL_data.2020'
-mydir = '../../datasets/refined-set'
-
-aff_dict = get_affinities(mydir_aff)
-pdb_files = read_dataset(mydir)
+aff_dict = get_affinities(FLAGS.aff_dir)
+pdb_files = read_dataset(FLAGS.data_dir)
 dataset = PDBDataset(pdb_files, aff_dict)
 
 train_size = int(0.8 * len(dataset))
@@ -66,6 +77,6 @@ with torch.no_grad():
     model.eval()
     for inputs, targets in test_dataset:
         y_pred = model(inputs)
-        val_loss = mse_loss(y_pred[0], torch.tensor(targets))
+        val_loss = mse_loss(y_pred[0], torch.as_tensor(targets))
         val_losses.append(val_loss)
 print(sum(val_losses) / len(val_losses))

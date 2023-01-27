@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
-"""
+'''
 Created on Fri Jan 13 16:45:27 2023
 
 @author: anaso
-"""
+'''
 
 import os
 import torch
@@ -23,7 +23,7 @@ mydir_aff = '../../../datasets/index/INDEX_general_PL_data.2020'
 def get_affinities(directory):
 
     aff_dict = {}
-    with open(directory, 'r') as f:
+    with open(directory, 'r', encoding='utf-8') as f:
         for line in f:
 
             if line[0] != '#':
@@ -49,7 +49,8 @@ def get_affinities(directory):
                 affinity_value = float(aff_unity[:-2])
 
                 exponent = unity_conv[aff_unity[-2:]]
-                # aff_unity - list, first element is Kd, Ki or IC50, second is aff
+                # aff_unity
+                # list, first element is Kd, Ki or IC50, second is aff
                 # first characters contain value (example: 49)
                 # last two characters of aff_unity contain unity (example: uM)
 
@@ -97,15 +98,17 @@ def read_dataset(directory):
 
 
 class PDBDataset(torch.utils.data.Dataset):
+    """ for a set of compounds will return their coordinates
+    padded and flatten (both the ligand and protein)"""
 
     def __init__(self, pdb_files, aff_dict):
-        """
+        '''
         Args:
-            pdb_files: list with triplets containing 
+            pdb_files: list with triplets containing
             name of compound (4 letters)
             path to pdb file describing protein
             path to sdf file describing ligand
-        """
+        '''
 
         self.dataset_len = len(pdb_files)
 
@@ -129,7 +132,7 @@ class PDBDataset(torch.utils.data.Dataset):
 
             max_len_l = max(max_len_l, len(coord_l))
 
-            data += [(torch.tensor(coord_p), torch.tensor(coord_l),
+            data += [(torch.as_tensor(coord_p), torch.as_tensor(coord_l),
                       aff_dict[comp_name][2])]
 
         self.data = data
