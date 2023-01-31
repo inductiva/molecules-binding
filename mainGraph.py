@@ -8,7 +8,6 @@ from modelGraph import GCN2
 from molecules_binding.datasets import read_dataset
 from molecules_binding.graphdataset import GraphDataset
 from torch_geometric.loader import DataLoader
-from torch import nn
 import torch
 
 mydir_aff = "../../datasets/index/INDEX_general_PL_data.2020"
@@ -16,8 +15,16 @@ directory = "../../datasets/refined-set"
 
 # Create the dataset object
 pdb_files = read_dataset(directory)
-dataset = GraphDataset(pdb_files[:5], mydir_aff)
-data_loader = DataLoader(dataset, batch_size=2, shuffle=True)
+dataset = GraphDataset(pdb_files, mydir_aff)
+
+train_size = 0.8
+train_size = int(train_size * len(dataset))
+test_size = len(dataset) - train_size
+train_dataset, test_dataset = torch.utils.data.random_split(
+    dataset, [train_size, test_size])
+
+train_loader = DataLoader(train_dataset, batch_size=60, shuffle=True)
+test_loader = DataLoader(test_dataset, batch_size=60, shuffle=False)
 
 ele2num = {
     "C": 0,
@@ -34,27 +41,45 @@ ele2num = {
 }
 num_features = len(ele2num)
 
-input_dim = num_features
-hidden_dim = 15
-output_dim = 1
-mse_loss = nn.MSELoss()
-num_epochs = 70
-loss_values = []
-
-# device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-model = GCN2(hidden_channels=64, num_node_features=11)# .to(device)
+model = GCN2(hidden_channels=64, num_node_features=num_features)
 optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
+criterion = torch.nn.MSELoss()
 
-model.double().train()
-for epoch in range(5):
-    epoch_loss = 0
-    for inputs, targets in data_loader:
-        optimizer.zero_grad()
-        
-        outputs = model(inputs, inputs.batch)
-        loss = mse_loss(outputs,  torch.unsqueeze(targets,-1).to(torch.double))
-        epoch_loss += loss
+
+def train():
+    model.double().train()
+
+    for data, target in train_loader:
+        out = model(data, data.batch)
+        loss = criterion(out,
+                         torch.unsqueeze(target, -1).to(
+                             torch.double))
         loss.backward()
         optimizer.step()
-        
-    loss_values.append(epoch_loss / len(data_loader))
+        optimizer.zero_grad()
+
+
+def test(loader):
+    model.eval()
+
+    mse = 0
+    for data, target in loader:
+        out = model(data, data.batch)
+        mse += criterion(
+            out,
+            torch.unsqueeze(target, -1).to(torch.double))
+    return mse / len(loader.dataset)
+
+
+train_errors = []
+test_errors = []
+for epoch in range(1, 50):
+    train()
+    train_err = test(train_loader)
+    test_err = test(test_loader)
+    print(
+        f"Epoch: {epoch:03d}, Train Error: {train_err:.4f}, \
+            Test Error: {test_err:.4f}"
+    )
+    train_errors += [train_err]
+    test_errors += [test_err]

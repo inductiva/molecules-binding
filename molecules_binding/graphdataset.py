@@ -5,35 +5,33 @@ Created on Thu Jan 26 15:33:28 2023
 @author: anaso
 """
 from torch_geometric.data import Data, Dataset
-
 import numpy as np
 import torch
 from rdkit import Chem
-
-
 from graphein.protein.config import ProteinGraphConfig
 from graphein.protein.graphs import construct_graph
 from graphein.protein.edges.atomic import add_atomic_edges
-
 import re
+
 mydir_aff = "../../../datasets/index/INDEX_general_PL_data.2020"
 directory = "../../../datasets/refined-set"
 
-# unity_conv = {'mM': -3, 'uM': -6, 'nM': -9, 'pM': -12,'fM': -15}
-def get_affinities(directory):
+
+# unity_conv = {"mM": -3, "uM": -6, "nM": -9, "pM": -12,"fM": -15}
+def get_affinities(dir_a):
     aff_dict = {}
-    with open(directory, 'r') as f:
+    with open(dir_a, "r", encoding="utf-8") as f:
         for line in f:
-            if line[0]!='#':
+            if line[0] != "#":
                 fields = line.split()
                 pdb_id = fields[0]
                 log_aff = float(fields[3])
                 aff_str = fields[4]
-                aff_tokens = re.split('[=<>~]+', aff_str)
+                aff_tokens = re.split("[=<>~]+", aff_str)
                 assert len(aff_tokens) == 2
                 label, aff_unity = aff_tokens
-                assert label in ['Kd', 'Ki', 'IC50']
-                affinity_value =  float(aff_unity[:-2])
+                assert label in ["Kd", "Ki", "IC50"]
+                affinity_value = float(aff_unity[:-2])
                 #exponent = unity_conv[aff_unity[-2:]]
                 aff = float(affinity_value)
                 aff_dict[pdb_id] = [label, aff, log_aff]
@@ -59,7 +57,7 @@ num_features = len(ele2num)
 class GraphDataset(Dataset):
     """
     Args:
-        pdb_files: list with triplets containing 
+        pdb_files: list with triplets containing
         name of compound (4 letters)
         path to pdb file describing protein
         path to sdf file describing ligand
@@ -70,7 +68,7 @@ class GraphDataset(Dataset):
 
         self.dataset_len = len(pdb_files)
 
-        aff_dict = get_affinities(mydir_aff)
+        aff_d = get_affinities(mydir_aff)
 
         data_list = []
 
@@ -153,7 +151,7 @@ class GraphDataset(Dataset):
             edges = torch.cat((edges_ligand, edges_protein), dim=1)
 
             data_list += [(Data(x=atoms, edge_index=edges,
-                                pos=coords), aff_dict[comp_name][2])]
+                                pos=coords), aff_d[comp_name][2])]
 
         self.data_list = data_list
 
