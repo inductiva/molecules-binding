@@ -5,25 +5,40 @@ Created on Thu Jan 26 15:33:28 2023
 @author: anaso
 """
 from torch_geometric.data import Data, Dataset
-from torch_geometric.loader import DataLoader
 
 import numpy as np
 import torch
 from rdkit import Chem
 
-from datasets import get_affinities
 
 from graphein.protein.config import ProteinGraphConfig
 from graphein.protein.graphs import construct_graph
 from graphein.protein.edges.atomic import add_atomic_edges
 
-from datasets import read_dataset
-from torch import nn
-
-from modelGraph import GCN
-
+import re
 mydir_aff = "../../../datasets/index/INDEX_general_PL_data.2020"
 directory = "../../../datasets/refined-set"
+
+# unity_conv = {'mM': -3, 'uM': -6, 'nM': -9, 'pM': -12,'fM': -15}
+def get_affinities(directory):
+    aff_dict = {}
+    with open(directory, 'r') as f:
+        for line in f:
+            if line[0]!='#':
+                fields = line.split()
+                pdb_id = fields[0]
+                log_aff = float(fields[3])
+                aff_str = fields[4]
+                aff_tokens = re.split('[=<>~]+', aff_str)
+                assert len(aff_tokens) == 2
+                label, aff_unity = aff_tokens
+                assert label in ['Kd', 'Ki', 'IC50']
+                affinity_value =  float(aff_unity[:-2])
+                #exponent = unity_conv[aff_unity[-2:]]
+                aff = float(affinity_value)
+                aff_dict[pdb_id] = [label, aff, log_aff]
+    return aff_dict
+
 
 ele2num = {
     "C": 0,
@@ -149,37 +164,3 @@ class GraphDataset(Dataset):
         graph, affinity = self.data_list[index]
 
         return [graph, torch.as_tensor(float(affinity))]
-
-
-# Create the dataset object
-pdb_files = read_dataset(directory)
-dataset = GraphDataset(pdb_files[:5], mydir_aff)
-data_loader = DataLoader(dataset, batch_size=2, shuffle=True)
-
-
-
-input_dim = num_features
-hidden_dim = 15
-output_dim = 1
-mse_loss = nn.MSELoss()
-num_epochs = 70
-loss_values = []
-
-# device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-model = GCN(input_dim, hidden_dim)# .to(device)
-optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
-
-model.double().train()
-for epoch in range(5):
-    epoch_loss = 0
-    for inputs, targets in data_loader:
-        print(inputs, targets, torch.unsqueeze(targets,-1))
-        print(type(inputs), type(torch.unsqueeze(targets,-1)))
-        optimizer.zero_grad()
-        
-        outputs = model(inputs)
-        loss = mse_loss(outputs,  torch.unsqueeze(targets,-1))
-        
-        loss.backward()
-        optimizer.step()
-    loss_values.append(epoch_loss / len(data_loader))
