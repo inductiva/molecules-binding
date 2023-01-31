@@ -20,6 +20,8 @@ from graphein.protein.edges.atomic import add_atomic_edges
 from datasets import read_dataset
 from torch import nn
 
+from modelGraph import GCN
+
 mydir_aff = "../../../datasets/index/INDEX_general_PL_data.2020"
 directory = "../../../datasets/refined-set"
 
@@ -146,7 +148,7 @@ class GraphDataset(Dataset):
     def __getitem__(self, index):
         graph, affinity = self.data_list[index]
 
-        return [graph, np.float32(affinity)]
+        return [graph, torch.as_tensor(float(affinity))]
 
 
 # Create the dataset object
@@ -155,7 +157,6 @@ dataset = GraphDataset(pdb_files[:5], mydir_aff)
 data_loader = DataLoader(dataset, batch_size=2, shuffle=True)
 
 
-from modelGraph import GCN
 
 input_dim = num_features
 hidden_dim = 15
@@ -168,15 +169,17 @@ loss_values = []
 model = GCN(input_dim, hidden_dim)# .to(device)
 optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
 
-model.train()
+model.double().train()
 for epoch in range(5):
     epoch_loss = 0
     for inputs, targets in data_loader:
         print(inputs, targets, torch.unsqueeze(targets,-1))
+        print(type(inputs), type(torch.unsqueeze(targets,-1)))
         optimizer.zero_grad()
         
         outputs = model(inputs)
         loss = mse_loss(outputs,  torch.unsqueeze(targets,-1))
+        
         loss.backward()
         optimizer.step()
     loss_values.append(epoch_loss / len(data_loader))
