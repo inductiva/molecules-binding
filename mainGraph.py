@@ -4,7 +4,7 @@ Created on Tue Jan 31 11:01:43 2023
 
 @author: anaso
 """
-from modelGraph import GCN2
+from models import GCN
 from molecules_binding.datasets import read_dataset
 from molecules_binding.graphdataset import GraphDataset
 from torch_geometric.loader import DataLoader
@@ -41,7 +41,7 @@ ele2num = {
 }
 num_features = len(ele2num)
 
-model = GCN2(hidden_channels=64, num_node_features=num_features)
+model = GCN(hidden_channels=64, num_node_features=num_features)
 optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
 criterion = torch.nn.MSELoss()
 
