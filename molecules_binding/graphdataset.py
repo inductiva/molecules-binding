@@ -13,10 +13,6 @@ from graphein.protein.graphs import construct_graph
 from graphein.protein.edges.atomic import add_atomic_edges
 import re
 
-mydir_aff = "../../../datasets/index/INDEX_general_PL_data.2020"
-directory = "../../../datasets/refined-set"
-
-
 # unity_conv = {"mM": -3, "uM": -6, "nM": -9, "pM": -12,"fM": -15}
 def get_affinities(dir_a):
     aff_dict = {}
@@ -54,12 +50,6 @@ ele2num = {
 num_features = len(ele2num) + 1
 
 
-def distance(coord1, coord2):
-    x1, y1, z1 = coord1
-    x2, y2, z2 = coord2
-    return np.sqrt((x1 - x2)**2 + (y1 - y2)**2 + (z1 - z2)**2)
-
-
 class GraphDataset(Dataset):
     """
     Args:
@@ -89,7 +79,7 @@ class GraphDataset(Dataset):
 
         for comp_name, path_protein, path_ligand in pdb_files:
 
-            # Ligand
+            # ---------------- Ligand -----------------------------
             structure_lig = Chem.SDMolSupplier(path_ligand, sanitize=False)[0]
             conf_lig = structure_lig.GetConformer()
             # coordinates of ligand
@@ -159,7 +149,7 @@ class GraphDataset(Dataset):
 
             num_atoms_protein = len(nodes_dic)
 
-            # distance between atoms in protein and ligand
+            # ----------- Protein + Ligand -------------------
 
             edges_dis_both = []
 
@@ -170,7 +160,7 @@ class GraphDataset(Dataset):
                 for atom_p in range(num_atoms_protein - num_atoms_ligand):
                     posl = pos_l[atom_l]
                     posp = pos_p[atom_p]
-                    dis = distance(posl, posp)
+                    dis = np.linalg.norm(posl - posp)
                     if dis < 4:
                         rows_both += [atom_l, num_atoms_ligand + atom_p]
                         cols_both += [num_atoms_ligand + atom_p, atom_l]
@@ -179,7 +169,6 @@ class GraphDataset(Dataset):
 
             edges_both = torch.as_tensor([rows_both, cols_both])
 
-            # Graph Protein + Ligand
             edges_dis_lig = torch.ones(len(edges_ligand[0]))
             edges_dis_pro = torch.ones(len(edges_protein[0]))
             edges_dis_both = torch.as_tensor(edges_dis_both)

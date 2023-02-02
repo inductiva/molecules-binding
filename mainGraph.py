@@ -7,37 +7,70 @@ Created on Tue Jan 31 11:01:43 2023
 from models import GCN
 from molecules_binding.datasets import read_dataset
 from molecules_binding.graphdataset import GraphDataset
+from molecules_binding.graphdataset import num_features
 from torch_geometric.loader import DataLoader
 import torch
 import matplotlib.pyplot as plt
+from absl import flags
+import sys
 
-mydir_aff = "../../datasets/index/INDEX_general_PL_data.2020"
-directory = "../../datasets/refined-set"
+flags.DEFINE_string("aff_dir",
+                    "../../datasets/index/INDEX_general_PL_data.2020",
+                    "specify the path to the index of the dataset")
+
+flags.DEFINE_string("data_dir", "../../datasets/refined-set",
+                    "specify the path to the dataset")
+
+flags.DEFINE_string("path_dataset",
+                    "C:/Users/anaso/Desktop/datasetdistance2.pt",
+                    "specify the path to the dataset")
+
+flags.DEFINE_float("train_perc", 0.8, "percentage of train-validation-split")
+
+flags.DEFINE_integer("batch_size", 32, "batch size")
+
+flags.DEFINE_integer("num_hidden", 30,
+                     "size of the new features after conv layer")
+
+FLAGS = flags.FLAGS
+FLAGS(sys.argv)
 
 
-# Create the dataset object
+# Create the dataset object and stores it in path
 def create_dataset(direct: str, aff_dir: str, path: str):
     pdb_files = read_dataset(direct)
-    dataset = GraphDataset(pdb_files, aff_dir)
-    torch.save(dataset, path)
+    datasetg = GraphDataset(pdb_files, aff_dir)
+    torch.save(datasetg, path)
+
+
+create_dataset(FLAGS.data_dir, FLAGS.aff_dir, FLAGS.path_dataset)
+
+
+def plot_loss(errors_array):
+    plt.plot([elem.detach().numpy() for elem in errors_array])
+    plt.xlabel("Epoch")
+    plt.ylabel("Loss")
+    plt.show()
 
 
 if __name__ == "__main__":
 
-    dataset = torch.load("C:/Users/anaso/Desktop/datasetdistance2.pt")
-    train_size = 0.8
-    train_size = int(train_size * len(dataset))
+    dataset = torch.load(FLAGS.path_dataset)
+    train_size = int(FLAGS.train_perc * len(dataset))
     test_size = len(dataset) - train_size
 
     train_dataset, test_dataset = torch.utils.data.random_split(
         dataset, [train_size, test_size])
 
-    train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True)
-    test_loader = DataLoader(test_dataset, batch_size=32, shuffle=False)
+    train_loader = DataLoader(train_dataset,
+                              batch_size=FLAGS.batch_size,
+                              shuffle=True)
+    test_loader = DataLoader(test_dataset,
+                             batch_size=FLAGS.batch_size,
+                             shuffle=False)
 
-    num_features = 12
-
-    model = GCN(hidden_channels=30, num_node_features=num_features)
+    model = GCN(hidden_channels=FLAGS.num_hidden,
+                num_node_features=num_features)
     optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
     criterion = torch.nn.MSELoss()
 
@@ -57,7 +90,6 @@ if __name__ == "__main__":
             out = model(data, data.batch)
             # print(out, data.y)
             mse += criterion(out, data.y.unsqueeze(1))
-            print(criterion(out, data.y))
         return mse / len(loader.dataset)
 
     train_errors = []
@@ -71,14 +103,6 @@ if __name__ == "__main__":
         train_errors += [train_err]
         test_errors += [test_err]
 
-    plt.plot([elem.detach().numpy() for elem in train_errors])
-    plt.xlabel('Epoch')
-    plt.ylabel('Loss')
-    # plt.savefig('train_error.png', bbox_inches='tight')
-    plt.show()
+    plot_loss(train_errors)
 
-    plt.plot([elem.detach().numpy() for elem in test_errors])
-    plt.xlabel('Epoch')
-    plt.ylabel('Loss')
-    # plt.savefig('test_error.png', bbox_inches='tight')
-    plt.show()
+    plot_loss(test_errors)

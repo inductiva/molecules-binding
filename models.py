@@ -68,8 +68,3 @@ class GCN(MessagePassing):
         x = self.lin(x)
 
         return x
-
-
-# model = GCN2(hidden_channels=64, num_node_features=11)
-# model.double()
-# print(model)
