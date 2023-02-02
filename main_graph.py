@@ -12,7 +12,8 @@ from torch_geometric.loader import DataLoader
 import torch
 import matplotlib.pyplot as plt
 from absl import flags
-import sys
+from absl import app
+
 
 flags.DEFINE_string("aff_dir",
                     "../../datasets/index/INDEX_general_PL_data.2020",
@@ -22,7 +23,7 @@ flags.DEFINE_string("data_dir", "../../datasets/refined-set",
                     "specify the path to the dataset")
 
 flags.DEFINE_string("path_dataset",
-                    "C:/Users/anaso/Desktop/datasetdistance2.pt",
+                    "../../dataset_stored",
                     "specify the path to the dataset")
 
 flags.DEFINE_float("train_perc", 0.8, "percentage of train-validation-split")
@@ -33,7 +34,6 @@ flags.DEFINE_integer("num_hidden", 30,
                      "size of the new features after conv layer")
 
 FLAGS = flags.FLAGS
-FLAGS(sys.argv)
 
 
 # Create the dataset object and stores it in path
@@ -42,10 +42,6 @@ def create_dataset(direct: str, aff_dir: str, path: str):
     datasetg = GraphDataset(pdb_files, aff_dir)
     torch.save(datasetg, path)
 
-
-create_dataset(FLAGS.data_dir, FLAGS.aff_dir, FLAGS.path_dataset)
-
-
 def plot_loss(errors_array):
     plt.plot([elem.detach().numpy() for elem in errors_array])
     plt.xlabel("Epoch")
@@ -53,8 +49,10 @@ def plot_loss(errors_array):
     plt.show()
 
 
-if __name__ == "__main__":
-
+def main(_):
+    
+    create_dataset(FLAGS.data_dir, FLAGS.aff_dir, FLAGS.path_dataset)
+    
     dataset = torch.load(FLAGS.path_dataset)
     train_size = int(FLAGS.train_perc * len(dataset))
     test_size = len(dataset) - train_size
@@ -71,18 +69,19 @@ if __name__ == "__main__":
 
     model = GCN(hidden_channels=FLAGS.num_hidden,
                 num_node_features=num_features)
+    model.double()
     optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
     criterion = torch.nn.MSELoss()
 
     def train():
-        model.double().train()
+        model.train()
         for data in train_loader:
             out = model(data, data.batch)
             loss = criterion(out, data.y.unsqueeze(1))
             loss.backward()
             optimizer.step()
             optimizer.zero_grad()
-
+    
     def test(loader):
         model.eval()
         mse = 0
@@ -91,7 +90,7 @@ if __name__ == "__main__":
             # print(out, data.y)
             mse += criterion(out, data.y.unsqueeze(1))
         return mse / len(loader.dataset)
-
+    
     train_errors = []
     test_errors = []
     for epoch in range(1, 50):
@@ -106,3 +105,6 @@ if __name__ == "__main__":
     plot_loss(train_errors)
 
     plot_loss(test_errors)
+
+if __name__ == "__main__":
+    app.run(main)
