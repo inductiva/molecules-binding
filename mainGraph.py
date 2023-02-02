@@ -9,77 +9,76 @@ from molecules_binding.datasets import read_dataset
 from molecules_binding.graphdataset import GraphDataset
 from torch_geometric.loader import DataLoader
 import torch
+import matplotlib.pyplot as plt
 
 mydir_aff = "../../datasets/index/INDEX_general_PL_data.2020"
 directory = "../../datasets/refined-set"
 
+
 # Create the dataset object
-pdb_files = read_dataset(directory)
-dataset = GraphDataset(pdb_files, mydir_aff)
-
-train_size = 0.8
-train_size = int(train_size * len(dataset))
-test_size = len(dataset) - train_size
-train_dataset, test_dataset = torch.utils.data.random_split(
-    dataset, [train_size, test_size])
-
-train_loader = DataLoader(train_dataset, batch_size=60, shuffle=True)
-test_loader = DataLoader(test_dataset, batch_size=60, shuffle=False)
-
-ele2num = {
-    "C": 0,
-    "H": 1,
-    "O": 2,
-    "N": 3,
-    "S": 4,
-    "SE": 5,
-    "P": 6,
-    "F": 7,
-    "Cl": 8,
-    "I": 9,
-    "Br": 10
-}
-num_features = len(ele2num)
-
-model = GCN(hidden_channels=64, num_node_features=num_features)
-optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
-criterion = torch.nn.MSELoss()
+def create_dataset(direct: str, aff_dir: str, path: str):
+    pdb_files = read_dataset(direct)
+    dataset = GraphDataset(pdb_files, aff_dir)
+    torch.save(dataset, path)
 
 
-def train():
-    model.double().train()
+if __name__ == "__main__":
 
-    for data, target in train_loader:
-        out = model(data, data.batch)
-        loss = criterion(out,
-                         torch.unsqueeze(target, -1).to(
-                             torch.double))
-        loss.backward()
-        optimizer.step()
-        optimizer.zero_grad()
+    dataset = torch.load("C:/Users/anaso/Desktop/datasetdistance2.pt")
+    train_size = 0.8
+    train_size = int(train_size * len(dataset))
+    test_size = len(dataset) - train_size
 
+    train_dataset, test_dataset = torch.utils.data.random_split(
+        dataset, [train_size, test_size])
 
-def test(loader):
-    model.eval()
+    train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True)
+    test_loader = DataLoader(test_dataset, batch_size=32, shuffle=False)
 
-    mse = 0
-    for data, target in loader:
-        out = model(data, data.batch)
-        mse += criterion(
-            out,
-            torch.unsqueeze(target, -1).to(torch.double))
-    return mse / len(loader.dataset)
+    num_features = 12
 
+    model = GCN(hidden_channels=30, num_node_features=num_features)
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
+    criterion = torch.nn.MSELoss()
 
-train_errors = []
-test_errors = []
-for epoch in range(1, 50):
-    train()
-    train_err = test(train_loader)
-    test_err = test(test_loader)
-    print(
-        f"Epoch: {epoch:03d}, Train Error: {train_err:.4f}, \
-            Test Error: {test_err:.4f}"
-    )
-    train_errors += [train_err]
-    test_errors += [test_err]
+    def train():
+        model.double().train()
+        for data in train_loader:
+            out = model(data, data.batch)
+            loss = criterion(out, data.y.unsqueeze(1))
+            loss.backward()
+            optimizer.step()
+            optimizer.zero_grad()
+
+    def test(loader):
+        model.eval()
+        mse = 0
+        for data in loader:
+            out = model(data, data.batch)
+            # print(out, data.y)
+            mse += criterion(out, data.y.unsqueeze(1))
+            print(criterion(out, data.y))
+        return mse / len(loader.dataset)
+
+    train_errors = []
+    test_errors = []
+    for epoch in range(1, 50):
+        train()
+        train_err = test(train_loader)
+        test_err = test(test_loader)
+        print(f"Epoch: {epoch:03d}, Train Error: {train_err:.4f}, \
+                Test Error: {test_err:.4f}")
+        train_errors += [train_err]
+        test_errors += [test_err]
+
+    plt.plot([elem.detach().numpy() for elem in train_errors])
+    plt.xlabel('Epoch')
+    plt.ylabel('Loss')
+    # plt.savefig('train_error.png', bbox_inches='tight')
+    plt.show()
+
+    plt.plot([elem.detach().numpy() for elem in test_errors])
+    plt.xlabel('Epoch')
+    plt.ylabel('Loss')
+    # plt.savefig('test_error.png', bbox_inches='tight')
+    plt.show()

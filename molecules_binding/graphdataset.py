@@ -39,19 +39,25 @@ def get_affinities(dir_a):
 
 
 ele2num = {
-    "C": 0,
     "H": 1,
     "O": 2,
     "N": 3,
-    "S": 4,
-    "SE": 5,
-    "P": 6,
-    "F": 7,
-    "Cl": 8,
-    "I": 9,
-    "Br": 10
+    "C": 4,
+    "S": 5,
+    "SE": 6,
+    "P": 7,
+    "F": 8,
+    "Cl": 9,
+    "I": 10,
+    "Br": 11
 }
-num_features = len(ele2num)
+num_features = len(ele2num) + 1
+
+
+def distance(coord1, coord2):
+    x1, y1, z1 = coord1
+    x2, y2, z2 = coord2
+    return np.sqrt((x1 - x2)**2 + (y1 - y2)**2 + (z1 - z2)**2)
 
 
 class GraphDataset(Dataset):
@@ -65,17 +71,19 @@ class GraphDataset(Dataset):
     """
 
     def __init__(self, pdb_files, mydir_aff):
-
+        self.root = r"C:/Users/anaso/Desktop/download_test"
         self.dataset_len = len(pdb_files)
 
         aff_d = get_affinities(mydir_aff)
 
         data_list = []
 
+        # configurations for protein graph
         config = ProteinGraphConfig()
         params_to_change = {
             "granularity": "atom",
-            "edge_construction_functions": [add_atomic_edges]
+            "edge_construction_functions": [add_atomic_edges],
+            "verbose": True
         }
         config = ProteinGraphConfig(**params_to_change)
 
@@ -84,7 +92,9 @@ class GraphDataset(Dataset):
             # Ligand
             structure_lig = Chem.SDMolSupplier(path_ligand, sanitize=False)[0]
             conf_lig = structure_lig.GetConformer()
-            coords_ligand = torch.as_tensor(conf_lig.GetPositions())
+            # coordinates of ligand
+            pos_l = conf_lig.GetPositions()
+            coords_ligand = torch.as_tensor(pos_l)
 
             atoms_ligand_e = [
                 atom.GetSymbol() for atom in structure_lig.GetAtoms()
@@ -108,8 +118,9 @@ class GraphDataset(Dataset):
             cols_l = [edge[1] for edge in edges_bi]
             edges_ligand = torch.tensor([rows_l, cols_l])
 
-            # Protein
+            # ---------------- Protein -----------------------------
             g = construct_graph(config=config, pdb_path=path_protein)
+
             nodes_dic = {}
 
             for i, (ident, d) in enumerate(g.nodes(data=True)):
@@ -132,8 +143,9 @@ class GraphDataset(Dataset):
 
             edges_protein = torch.as_tensor([rows_p, cols_p])
             nodes_list = list(nodes_dic.values())
-            coords_protein = torch.as_tensor(
-                [attr[2].tolist() for attr in nodes_list])
+
+            pos_p = [attr[2].tolist() for attr in nodes_list]
+            coords_protein = torch.as_tensor(pos_p)
 
             atoms_protein_e = [attr[1] for attr in nodes_list]
             atoms_protein_n = [
@@ -142,16 +154,50 @@ class GraphDataset(Dataset):
 
             atoms_protein = np.zeros((len(atoms_protein_n), num_features))
             atoms_protein[np.arange(len(atoms_protein_n)), atoms_protein_n] = 1
+            atoms_protein[np.arange(len(atoms_protein_n)), 0] = 1
             atoms_protein = torch.as_tensor(atoms_protein)
 
+            num_atoms_protein = len(nodes_dic)
+
+            # distance between atoms in protein and ligand
+
+            edges_dis_both = []
+
+            rows_both = []
+            cols_both = []
+
+            for atom_l in range(num_atoms_ligand):
+                for atom_p in range(num_atoms_protein - num_atoms_ligand):
+                    posl = pos_l[atom_l]
+                    posp = pos_p[atom_p]
+                    dis = distance(posl, posp)
+                    if dis < 4:
+                        rows_both += [atom_l, num_atoms_ligand + atom_p]
+                        cols_both += [num_atoms_ligand + atom_p, atom_l]
+
+                        edges_dis_both += [1 / dis, 1 / dis]
+
+            edges_both = torch.as_tensor([rows_both, cols_both])
+
             # Graph Protein + Ligand
+            edges_dis_lig = torch.ones(len(edges_ligand[0]))
+            edges_dis_pro = torch.ones(len(edges_protein[0]))
+            edges_dis_both = torch.as_tensor(edges_dis_both)
 
             atoms = torch.cat((atoms_ligand, atoms_protein))
             coords = torch.cat((coords_ligand, coords_protein))
-            edges = torch.cat((edges_ligand, edges_protein), dim=1)
+            edges = torch.cat((edges_ligand, edges_protein, edges_both), dim=1)
 
-            data_list += [(Data(x=atoms, edge_index=edges,
-                                pos=coords), aff_d[comp_name][2])]
+            edges_atrr = torch.cat(
+                (edges_dis_lig, edges_dis_pro, edges_dis_both))
+
+            data_list += [
+                Data(x=atoms,
+                     edge_index=edges,
+                     pos=coords,
+                     edge_attr=edges_atrr,
+                     y=torch.as_tensor(np.float64(aff_d[comp_name][2])))
+            ]
 
         self.data_list = data_list
 
@@ -159,6 +205,5 @@ class GraphDataset(Dataset):
         return self.dataset_len
 
     def __getitem__(self, index):
-        graph, affinity = self.data_list[index]
 
-        return [graph, torch.as_tensor(float(affinity))]
+        return self.data_list[index]

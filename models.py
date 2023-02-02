@@ -15,6 +15,7 @@ from torch_geometric.nn import global_mean_pool
 
 class MLP(nn.Module):
     """ Simple Multilayer perceptron """
+
     def __init__(self, input_size, hidden_size, output_size):
         super().__init__()
         self.fc1 = nn.Linear(input_size, hidden_size)
@@ -41,22 +42,23 @@ class GCN(MessagePassing):
     x (float): affinity of the graph
 
    """
+
     def __init__(self, hidden_channels, num_node_features):
         super().__init__(aggr='add')
         torch.manual_seed(12345)
         self.conv1 = GCNConv(num_node_features, hidden_channels)
         self.conv2 = GCNConv(hidden_channels, hidden_channels)
-        # self.conv3 = GCNConv(hidden_channels, hidden_channels)
+        self.conv3 = GCNConv(hidden_channels, hidden_channels)
         self.lin = Linear(hidden_channels, 1)
 
     def forward(self, data, batch):
-        x, edge_index = data.x, data.edge_index
+        x, edge_index, edge_attrs = data.x, data.edge_index, data.edge_attr
         # 1. Obtain node embeddings
-        x = self.conv1(x, edge_index)
+        x = self.conv1(x, edge_index, edge_attrs)
         x = x.relu()
-        x = self.conv2(x, edge_index)
-        # x = x.relu()
-        # x = self.conv3(x, edge_index)
+        x = self.conv2(x, edge_index, edge_attrs)
+        x = x.relu()
+        x = self.conv3(x, edge_index, edge_attrs)
 
         # 2. Readout layer
         x = global_mean_pool(x, batch)
