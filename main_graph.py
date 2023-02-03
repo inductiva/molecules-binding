@@ -40,8 +40,8 @@ flags.DEFINE_integer("batch_size", 32, "batch size")
 flags.DEFINE_integer("num_hidden", 30,
                      "size of the new features after conv layer")
 
-flags.DEFINE_integer("num_epochs", 30,
-                     "number of epochs")
+flags.DEFINE_integer("num_epochs", 30, "number of epochs")
+
 
 # Create the dataset object and stores it in path
 def create_dataset(direct: str, aff_dir: str, path: str):
