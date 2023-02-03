@@ -11,6 +11,24 @@ from Bio.PDB import PDBParser
 import numpy as np
 import re
 from rdkit import Chem
+from graphein.protein.config import ProteinGraphConfig
+from graphein.protein.graphs import construct_graph
+from graphein.protein.edges.atomic import add_atomic_edges
+
+ele2num = {
+    "H": 1,
+    "O": 2,
+    "N": 3,
+    "C": 4,
+    "S": 5,
+    "SE": 6,
+    "P": 7,
+    "F": 8,
+    "Cl": 9,
+    "I": 10,
+    "Br": 11
+}
+num_features = 12
 
 unity_conv = {'mM': -3, 'uM': -6, 'nM': -9, 'pM': -12, 'fM': -15}
 
@@ -27,40 +45,25 @@ def get_affinities(directory):
         for line in f:
 
             if line[0] != '#':
-
                 fields = line.split()
-
                 pdb_id = fields[0]
-
                 log_aff = float(fields[3])
-
                 aff_str = fields[4]
-
                 # for PP problem would be aff_str = fields[3]
-
                 aff_tokens = re.split('[=<>~]+', aff_str)
-
                 assert len(aff_tokens) == 2
-
                 label, aff_unity = aff_tokens
-
                 assert label in ['Kd', 'Ki', 'IC50']
-
                 affinity_value = float(aff_unity[:-2])
-
                 exponent = unity_conv[aff_unity[-2:]]
                 # aff_unity
                 # list, first element is Kd, Ki or IC50, second is aff
                 # first characters contain value (example: 49)
                 # last two characters of aff_unity contain unity (example: uM)
-
                 # convert all values of affinity to M
                 aff = float(affinity_value) * 10**exponent
-
                 # for PP problem log_aff = float(-np.log10(aff))
-
                 # given pdb_id returns biding type, aff and -log(aff)
-
                 aff_dict[pdb_id] = [label, aff, log_aff]
 
     return aff_dict
@@ -96,6 +99,10 @@ def read_dataset(directory):
 
 # aff_dict = get_affinities(mydir_aff)
 
+def vector2onehot(vector, num_feat):
+    onehotvector = np.zeros((len(vector), num_feat))
+    onehotvector[np.arange(len(vector)), vector] = 1
+    return onehotvector
 
 class PDBDataset(torch.utils.data.Dataset):
     """ for a set of compounds will return their coordinates
@@ -110,9 +117,16 @@ class PDBDataset(torch.utils.data.Dataset):
             path to sdf file describing ligand
         '''
 
+        config = ProteinGraphConfig()
+        params_to_change = {
+            "granularity": "atom",
+            "edge_construction_functions": [add_atomic_edges]
+        }
+        config = ProteinGraphConfig(**params_to_change)
+
         self.dataset_len = len(pdb_files)
 
-        parser = PDBParser(QUIET=True)
+        # parser = PDBParser(QUIET=True)
 
         max_len_p = 0
         max_len_l = 0
@@ -120,21 +134,57 @@ class PDBDataset(torch.utils.data.Dataset):
         data = []
 
         for comp_name, path_protein, path_ligand in pdb_files:
-
-            structure_pro = parser.get_structure(comp_name, path_protein)
-            coord_p = [atom.get_coord() for atom in structure_pro.get_atoms()]
-
+            # ------------ Protein -------------
+            g = construct_graph(config=config, pdb_path=path_protein)
+            nodes_dic = {}
+            for i, (ident, d) in enumerate(g.nodes(data=True)):
+                nodes_dic[ident] = [
+                    i, d["element_symbol"], d["coords"]
+                ]
+            
+            nodes_list = list(nodes_dic.values())
+            coord_p = [attr[2].tolist() for attr in nodes_list]
+            
+            
+            # structure_pro = parser.get_structure(comp_name, path_protein)
+            # coord_p = [atom.get_coord() for atom in structure_pro.get_atoms()]
+            
             max_len_p = max(max_len_p, len(coord_p))
+            
+            elem_p = [attr[1] for attr in nodes_list]
+            # elem_p = [atom.element for atom in structure_pro.get_atoms()]
+            elem_p_n = [ele2num[i] for i in elem_p]
+            
+            
+            onehotelem_p = vector2onehot(elem_p_n, num_features)
+            onehotelem_p[np.arange(len(elem_p_n)), 0] = 1
+            
+            # ------------ Ligand -------------
 
             structure_lig = Chem.SDMolSupplier(path_ligand, sanitize=False)[0]
             conf_lig = structure_lig.GetConformer()
             coord_l = conf_lig.GetPositions()
-
+            
+            elem_l = [
+                atom.GetSymbol() for atom in structure_lig.GetAtoms()
+            ]
+            
+            elem_l_n = [ele2num[i] for i in elem_l]
+            onehotelem_l = vector2onehot(elem_l_n, num_features)
+            
+            
+            
             max_len_l = max(max_len_l, len(coord_l))
+            
 
-            data += [(torch.as_tensor(coord_p), torch.as_tensor(coord_l),
+            data += [(torch.as_tensor(np.concatenate((onehotelem_p,coord_p),
+                                                     axis=1)), 
+                      torch.as_tensor(np.concatenate((onehotelem_l,coord_l),
+                                                     axis=1)),
                       aff_dict[comp_name][2])]
-
+            
+            
+            
         self.data = data
         self.max_len_p = max_len_p
         self.max_len_l = max_len_l
@@ -157,4 +207,4 @@ class PDBDataset(torch.utils.data.Dataset):
 
         return torch.flatten(
             torch.cat((coords_p,coords_l), dim = 0).float()), \
-            np.float32(affinity)
+            np.float64(affinity)
