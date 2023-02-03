@@ -4,7 +4,8 @@ Created on Thu Jan 26 15:33:28 2023
 
 @author: anaso
 """
-from torch_geometric.data import Data, Dataset
+# from torch_geometric.data import Data, Dataset
+from torch_geometric.data import Data, InMemoryDataset
 import numpy as np
 import torch
 from rdkit import Chem
@@ -12,6 +13,7 @@ from graphein.protein.config import ProteinGraphConfig
 from graphein.protein.graphs import construct_graph
 from graphein.protein.edges.atomic import add_atomic_edges
 import re
+
 
 # unity_conv = {"mM": -3, "uM": -6, "nM": -9, "pM": -12,"fM": -15}
 def get_affinities(dir_a):
@@ -50,7 +52,7 @@ ele2num = {
 num_features = len(ele2num) + 1
 
 
-class GraphDataset(Dataset):
+class GraphDataset(InMemoryDataset):
     """
     Args:
         pdb_files: list with triplets containing
@@ -61,7 +63,7 @@ class GraphDataset(Dataset):
     """
 
     def __init__(self, pdb_files, mydir_aff):
-        self.root = r"C:/Users/anaso/Desktop/download_test"
+        super().__init__("GraphDataset")
         self.dataset_len = len(pdb_files)
 
         aff_d = get_affinities(mydir_aff)

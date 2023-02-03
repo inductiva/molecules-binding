@@ -4,7 +4,7 @@ Created on Tue Jan 31 11:01:43 2023
 
 @author: anaso
 """
-from models import GCN
+from molecules_binding.models import GCN
 from molecules_binding.datasets import read_dataset
 from molecules_binding.graphdataset import GraphDataset
 from molecules_binding.graphdataset import num_features
@@ -14,6 +14,9 @@ import matplotlib.pyplot as plt
 from absl import flags
 from absl import app
 
+FLAGS = flags.FLAGS
+# for name in list(flags.FLAGS):
+#       delattr(flags.FLAGS,name)
 
 flags.DEFINE_string("aff_dir",
                     "../../datasets/index/INDEX_general_PL_data.2020",
@@ -22,9 +25,13 @@ flags.DEFINE_string("aff_dir",
 flags.DEFINE_string("data_dir", "../../datasets/refined-set",
                     "specify the path to the dataset")
 
-flags.DEFINE_string("path_dataset",
-                    "../../dataset_stored",
-                    "specify the path to the dataset")
+# flags.DEFINE_string("path_dataset",
+#                     "../../datasetprocessed/dataset_stored_new",
+#                     "specify the path to the dataset")
+flags.DEFINE_string("path_dataset", None,
+                    "specify the path to the stored processed dataset")
+
+flags.mark_flag_as_required("path_dataset")
 
 flags.DEFINE_float("train_perc", 0.8, "percentage of train-validation-split")
 
@@ -33,14 +40,13 @@ flags.DEFINE_integer("batch_size", 32, "batch size")
 flags.DEFINE_integer("num_hidden", 30,
                      "size of the new features after conv layer")
 
-FLAGS = flags.FLAGS
-
 
 # Create the dataset object and stores it in path
 def create_dataset(direct: str, aff_dir: str, path: str):
     pdb_files = read_dataset(direct)
     datasetg = GraphDataset(pdb_files, aff_dir)
     torch.save(datasetg, path)
+
 
 def plot_loss(errors_array):
     plt.plot([elem.detach().numpy() for elem in errors_array])
@@ -50,9 +56,9 @@ def plot_loss(errors_array):
 
 
 def main(_):
-    
-    create_dataset(FLAGS.data_dir, FLAGS.aff_dir, FLAGS.path_dataset)
-    
+
+    # create_dataset(FLAGS.data_dir, FLAGS.aff_dir, FLAGS.path_dataset)
+
     dataset = torch.load(FLAGS.path_dataset)
     train_size = int(FLAGS.train_perc * len(dataset))
     test_size = len(dataset) - train_size
@@ -81,7 +87,7 @@ def main(_):
             loss.backward()
             optimizer.step()
             optimizer.zero_grad()
-    
+
     def test(loader):
         model.eval()
         mse = 0
@@ -90,7 +96,12 @@ def main(_):
             # print(out, data.y)
             mse += criterion(out, data.y.unsqueeze(1))
         return mse / len(loader.dataset)
-    
+
+    # def finaltest(loader):
+    #     model.eval()
+    #     for data in loader:
+    #         out = model(data, data.batch)
+
     train_errors = []
     test_errors = []
     for epoch in range(1, 50):
@@ -105,6 +116,7 @@ def main(_):
     plot_loss(train_errors)
 
     plot_loss(test_errors)
+
 
 if __name__ == "__main__":
     app.run(main)

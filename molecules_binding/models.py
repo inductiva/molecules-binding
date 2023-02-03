@@ -32,18 +32,17 @@ class MLP(nn.Module):
 
 
 class GCN(MessagePassing):
-    """Graph Convolutional Neural Network
-
-    Parameters:
-    hidden_channels (int): Number of features for each node
-    num_node_features (int): Initial number of node features
-
-    Returns:
-    x (float): affinity of the graph
-
-   """
+    """
+        Graph Convolution Neural Network
+    """
 
     def __init__(self, hidden_channels, num_node_features):
+        """Graph Convolutional Neural Network
+
+        Parameters:
+            hidden_channels (int): Number of features for each node
+            num_node_features (int): Initial number of node features
+        """
         super().__init__(aggr='add')
         torch.manual_seed(12345)
         self.conv1 = GCNConv(num_node_features, hidden_channels)
@@ -52,6 +51,10 @@ class GCN(MessagePassing):
         self.lin = Linear(hidden_channels, 1)
 
     def forward(self, data, batch):
+        """
+        Returns:
+            x (float): affinity of the graph
+        """
         x, edge_index, edge_attrs = data.x, data.edge_index, data.edge_attr
         # 1. Obtain node embeddings
         x = self.conv1(x, edge_index, edge_attrs)
