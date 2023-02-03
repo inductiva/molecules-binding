@@ -40,6 +40,8 @@ flags.DEFINE_integer("batch_size", 32, "batch size")
 flags.DEFINE_integer("num_hidden", 30,
                      "size of the new features after conv layer")
 
+flags.DEFINE_integer("num_epochs", 30,
+                     "number of epochs")
 
 # Create the dataset object and stores it in path
 def create_dataset(direct: str, aff_dir: str, path: str):
@@ -93,18 +95,16 @@ def main(_):
         mse = 0
         for data in loader:
             out = model(data, data.batch)
+            print(out[0], data.y[0])
             # print(out, data.y)
             mse += criterion(out, data.y.unsqueeze(1))
-        return mse / len(loader.dataset)
-
-    # def finaltest(loader):
-    #     model.eval()
-    #     for data in loader:
-    #         out = model(data, data.batch)
+            print(criterion(out, data.y.unsqueeze(1)))
+        print(mse, len(loader))
+        return mse / len(loader)
 
     train_errors = []
     test_errors = []
-    for epoch in range(1, 50):
+    for epoch in range(1, FLAGS.num_epochs):
         train()
         train_err = test(train_loader)
         test_err = test(test_loader)
