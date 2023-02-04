@@ -22,7 +22,7 @@ def plot_loss(errors_array):
     plt.plot([elem.detach().numpy() for elem in errors_array])
     plt.xlabel("Epoch")
     plt.ylabel("Loss")
-    plt.savefig("../../plot")
+    # plt.savefig("../../plot")
     plt.show()
 
 flags.DEFINE_string('aff_dir',
@@ -87,7 +87,7 @@ def test(loader):
     for inputs, target in loader:
         out = model(inputs.double())
         mse += criterion(out, torch.unsqueeze(target, -1))
-    return mse / len(loader.dataset)
+    return mse / len(loader)
 
 
 train_errors = []
