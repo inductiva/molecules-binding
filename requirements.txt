@@ -1,1 +1,9 @@
 absl-py
+torch
+torch_geometric
+torch_sparse
+torch_scatter
+Bio
+rdkit
+networkx==2.8.8
+graphein
