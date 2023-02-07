@@ -12,6 +12,8 @@ import matplotlib.pyplot as plt
 from absl import flags
 from absl import app
 import psutil
+import numpy as np
+from scipy.stats import spearmanr
 
 FLAGS = flags.FLAGS
 
@@ -57,6 +59,29 @@ def test(loader, model, criterion):
     return mse / len(loader)
 
 
+def test_final(loader, model):
+    preds = []
+    reals = []
+    model.eval()
+    for data in loader:
+        pred = model(data, data.batch)
+        real = data.y.unsqueeze(1)
+        preds += [pred.detach().numpy()[0][0]]
+        reals += [real.detach().numpy()[0][0]]
+    return np.array(preds), np.array(reals)
+
+
+def statistics(preds, reals):
+    error = np.abs(preds - reals)
+    mae = np.mean(error)
+    mse = np.mean(error**2)
+    rmse = np.sqrt(mse)
+    pearson_coef = np.corrcoef(preds, reals)
+    correlation, p_value = spearmanr(preds, reals)
+
+    return mae, mse, rmse, pearson_coef, correlation, p_value
+
+
 def main(_):
 
     dataset = torch.load(FLAGS.path_dataset)
@@ -73,6 +98,8 @@ def main(_):
                              batch_size=FLAGS.batch_size,
                              shuffle=False)
 
+    stat_loader = DataLoader(test_dataset, batch_size=1, shuffle=False)
+
     model = GCN(hidden_channels=FLAGS.num_hidden,
                 num_node_features=num_features)
     model.double()
@@ -81,7 +108,7 @@ def main(_):
 
     train_errors = []
     test_errors = []
-    for epoch in range(1, FLAGS.num_epochs):
+    for epoch in range(1, FLAGS.num_epochs + 1):
         train(model, train_loader, criterion, optimizer)
         print("RAM Used (GB):", psutil.virtual_memory()[3] / 1000000000)
         train_err = test(train_loader, model, criterion)
@@ -93,8 +120,17 @@ def main(_):
         train_errors += [train_err]
         test_errors += [test_err]
 
-    plot_loss(train_errors)
+    preds, reals = test_final(stat_loader, model)
 
+    mae, mse, rmse, pearson_coef, spearman_corr, spearman_p_value = \
+        statistics(preds, reals)
+
+    print(f"MAE is {mae}, MSE is {mse}, RMSE is {rmse}",
+          f"Pearson coefficient is {pearson_coef}",
+          f"Spearman correlation is {spearman_corr}",
+          f"Spearman p-value is {spearman_p_value}")
+
+    plot_loss(train_errors)
     plot_loss(test_errors)
 
 
