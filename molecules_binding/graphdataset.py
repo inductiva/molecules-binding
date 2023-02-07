@@ -62,7 +62,7 @@ class GraphDataset(InMemoryDataset):
         mydir_aff: to remove later
     """
 
-    def __init__(self, pdb_files, mydir_aff):
+    def __init__(self, pdb_files, mydir_aff, threshold):
         super().__init__("GraphDataset")
         self.dataset_len = len(pdb_files)
 
@@ -163,11 +163,11 @@ class GraphDataset(InMemoryDataset):
                     posl = pos_l[atom_l]
                     posp = pos_p[atom_p]
                     dis = np.linalg.norm(posl - posp)
-                    if dis < 4:
+                    if dis < threshold:
                         rows_both += [atom_l, num_atoms_ligand + atom_p]
                         cols_both += [num_atoms_ligand + atom_p, atom_l]
 
-                        edges_dis_both += [1 / dis, 1 / dis]
+                        edges_dis_both += [dis, dis]
 
             edges_both = torch.as_tensor([rows_both, cols_both])
 
