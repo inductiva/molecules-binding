@@ -11,7 +11,7 @@ import torch
 import matplotlib.pyplot as plt
 from absl import flags
 from absl import app
-import psutil
+# import psutil
 import numpy as np
 from scipy.stats import spearmanr
 
@@ -24,12 +24,12 @@ flags.mark_flag_as_required("path_dataset")
 
 flags.DEFINE_float("train_perc", 0.8, "percentage of train-validation-split")
 
-flags.DEFINE_integer("batch_size", 32, "batch size")
+flags.DEFINE_integer("batch_size", 8, "batch size")
 
 # flags.DEFINE_integer("num_hidden", 30,
 #                      "size of the new features after conv layer")
 
-flags.DEFINE_multi_integer("num_hidden", [40, 30, 30],
+flags.DEFINE_multi_integer("num_hidden", [40, 50, 30, 30],
                            "size of the new features after conv layer")
 
 flags.DEFINE_integer("num_epochs", 30, "number of epochs")
@@ -38,12 +38,15 @@ flags.DEFINE_float("learning_rate", 0.001, "learning rate")
 
 
 def plot_loss(errors_array):
-    plt.plot([elem.detach().numpy() for elem in errors_array])
+    plt.plot([elem.detach().cpu().numpy() for elem in errors_array])
     plt.xlabel("Epoch")
     plt.ylabel("Loss")
+    plt.savefig("../plots/loss")
     plt.show()
 
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
 
 def train(model, train_loader, criterion, optimizer):
     model.train()
@@ -63,8 +66,8 @@ def test(loader, model, criterion):
         data = data.to(device)
         out = model(data, data.batch)
         # print(out, data.y)
-        mse += criterion(out, data.y.unsqueeze(1))
-    return mse.detach() / len(loader)
+        mse += criterion(out, data.y.unsqueeze(1)).detach()
+    return mse / len(loader)
 
 
 def test_final(loader, model):
@@ -75,8 +78,8 @@ def test_final(loader, model):
         data = data.to(device)
         pred = model(data, data.batch)
         real = data.y.unsqueeze(1)
-        preds += [pred.detach().numpy()[0][0]]
-        reals += [real.detach().numpy()[0][0]]
+        preds += [pred.detach().cpu().numpy()[0][0]]
+        reals += [real.detach().cpu().numpy()[0][0]]
     return np.array(preds), np.array(reals)
 
 
@@ -119,11 +122,11 @@ def main(_):
     test_errors = []
     for epoch in range(1, FLAGS.num_epochs + 1):
         train(model, train_loader, criterion, optimizer)
-        print("RAM Used (GB):", psutil.virtual_memory()[3] / 1000000000)
+        # print("RAM Used (GB):", psutil.virtual_memory()[3] / 1000000000)
         train_err = test(train_loader, model, criterion)
-        print("RAM Used (GB):", psutil.virtual_memory()[3] / 1000000000)
+        # print("RAM Used (GB):", psutil.virtual_memory()[3] / 1000000000)
         test_err = test(test_loader, model, criterion)
-        print("RAM Used (GB):", psutil.virtual_memory()[3] / 1000000000)
+        # print("RAM Used (GB):", psutil.virtual_memory()[3] / 1000000000)
         print(f"Epoch: {epoch:03d}, Train Error: {train_err:.4f}, \
                 Test Error: {test_err:.4f}")
         train_errors += [train_err]
