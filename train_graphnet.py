@@ -43,10 +43,12 @@ def plot_loss(errors_array):
     plt.ylabel("Loss")
     plt.show()
 
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 def train(model, train_loader, criterion, optimizer):
     model.train()
     for data in train_loader:
+        data = data.to(device)
         out = model(data, data.batch)
         loss = criterion(out, data.y.unsqueeze(1))
         loss.backward()
@@ -58,6 +60,7 @@ def test(loader, model, criterion):
     model.eval()
     mse = 0
     for data in loader:
+        data = data.to(device)
         out = model(data, data.batch)
         # print(out, data.y)
         mse += criterion(out, data.y.unsqueeze(1))
@@ -69,6 +72,7 @@ def test_final(loader, model):
     reals = []
     model.eval()
     for data in loader:
+        data = data.to(device)
         pred = model(data, data.batch)
         real = data.y.unsqueeze(1)
         preds += [pred.detach().numpy()[0][0]]
@@ -106,6 +110,7 @@ def main(_):
 
     model = GraphNN(hidden_channels=FLAGS.num_hidden,
                     num_node_features=num_features)
+    model = model.to(device)
     model.double()
     optimizer = torch.optim.Adam(model.parameters(), lr=FLAGS.learning_rate)
     criterion = torch.nn.MSELoss()
