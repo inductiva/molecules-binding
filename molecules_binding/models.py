@@ -9,6 +9,7 @@ from torch import nn
 from torch.nn import Linear
 import torch.nn.functional as F
 from torch_geometric.nn import GCNConv
+from torch_geometric.nn import GATConv
 from torch_geometric.nn import MessagePassing
 from torch_geometric.nn import global_mean_pool
 
@@ -45,7 +46,7 @@ class GraphNN(MessagePassing):
         """
         super().__init__(aggr='add')
         torch.manual_seed(12345)
-        self.conv1 = GCNConv(num_node_features, hidden_channels)
+        self.gat1 = GATConv(num_node_features, hidden_channels)
         self.conv2 = GCNConv(hidden_channels, hidden_channels)
         self.conv3 = GCNConv(hidden_channels, hidden_channels)
         self.lin = Linear(hidden_channels, 1)
@@ -57,7 +58,7 @@ class GraphNN(MessagePassing):
         """
         x, edge_index, edge_attrs = data.x, data.edge_index, data.edge_attr
         # 1. Obtain node embeddings
-        x = self.conv1(x, edge_index, edge_attrs)
+        x = self.gat1(x, edge_index, edge_attrs)
         x = x.relu()
         x = self.conv2(x, edge_index, edge_attrs)
         x = x.relu()
