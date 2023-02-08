@@ -56,7 +56,7 @@ def test(loader, model, criterion):
         out = model(data, data.batch)
         # print(out, data.y)
         mse += criterion(out, data.y.unsqueeze(1))
-    return mse / len(loader)
+    return mse.detach() / len(loader)
 
 
 def test_final(loader, model):
@@ -83,7 +83,6 @@ def statistics(preds, reals):
 
 
 def main(_):
-
     dataset = torch.load(FLAGS.path_dataset)
     train_size = int(FLAGS.train_perc * len(dataset))
     test_size = len(dataset) - train_size
