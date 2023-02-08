@@ -31,7 +31,7 @@ class MLP(nn.Module):
         return x
 
 
-class GCN(MessagePassing):
+class GraphNN(MessagePassing):
     """
         Graph Convolution Neural Network
     """
@@ -67,7 +67,7 @@ class GCN(MessagePassing):
         x = global_mean_pool(x, batch)
 
         # 3. Apply a final classifier
-        x = F.dropout(x, p=0.5, training=self.training)
+        x = F.dropout(x, p=0.3, training=self.training)
         x = self.lin(x)
 
         return x

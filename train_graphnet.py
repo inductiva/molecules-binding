@@ -4,7 +4,7 @@ Created on Tue Jan 31 11:01:43 2023
 
 @author: anaso
 """
-from molecules_binding.models import GCN
+from molecules_binding.models import GraphNN
 from molecules_binding.graphdataset import num_features
 from torch_geometric.loader import DataLoader
 import torch
@@ -100,8 +100,8 @@ def main(_):
 
     stat_loader = DataLoader(test_dataset, batch_size=1, shuffle=False)
 
-    model = GCN(hidden_channels=FLAGS.num_hidden,
-                num_node_features=num_features)
+    model = GraphNN(hidden_channels=FLAGS.num_hidden,
+                    num_node_features=num_features)
     model.double()
     optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
     criterion = torch.nn.MSELoss()

@@ -4,8 +4,8 @@ Created on Thu Jan 26 15:33:28 2023
 
 @author: anaso
 """
-# from torch_geometric.data import Data, Dataset
-from torch_geometric.data import Data, InMemoryDataset
+from torch_geometric.data import Data, Dataset
+# from torch_geometric.data import Data, InMemoryDataset
 import numpy as np
 import torch
 from rdkit import Chem
@@ -52,7 +52,7 @@ ele2num = {
 num_features = len(ele2num) + 1
 
 
-class GraphDataset(InMemoryDataset):
+class GraphDataset(Dataset):
     """
     Args:
         pdb_files: list with triplets containing
@@ -97,6 +97,7 @@ class GraphDataset(InMemoryDataset):
 
             atoms_ligand = np.zeros((num_atoms_ligand, num_features))
             atoms_ligand[np.arange(num_atoms_ligand), atoms_ligand_n] = 1
+            atoms_ligand[np.arange(num_atoms_ligand), 0] = 1
             atoms_ligand = torch.as_tensor(atoms_ligand)
 
             edges_directed = [[bond.GetBeginAtomIdx(),
@@ -110,6 +111,12 @@ class GraphDataset(InMemoryDataset):
             cols_l = [edge[1] for edge in edges_bi]
             edges_ligand = torch.tensor([rows_l, cols_l])
 
+            edges_dis_l = []
+            for edge in edges_directed:
+                dis = np.linalg.norm(coords_ligand[edge[0]] -
+                                     coords_ligand[edge[1]])
+                edges_dis_l += [dis, dis]
+
             # ---------------- Protein -----------------------------
             g = construct_graph(config=config, pdb_path=path_protein)
 
@@ -122,7 +129,7 @@ class GraphDataset(InMemoryDataset):
 
             rows_p = []
             cols_p = []
-            edge_attr_p = []
+            edges_dis_p = []
             for u, v, a in g.edges(data=True):
                 id1 = nodes_dic[u][0]
                 id2 = nodes_dic[v][0]
@@ -130,8 +137,7 @@ class GraphDataset(InMemoryDataset):
                 rows_p += [id1, id2]
                 cols_p += [id2, id1]
 
-                edge_attr_p += [[a["bond_length"], a["kind"]],
-                                [a["bond_length"], a["kind"]]]
+                edges_dis_p += [a["bond_length"], a["bond_length"]]
 
             edges_protein = torch.as_tensor([rows_p, cols_p])
             nodes_list = list(nodes_dic.values())
@@ -146,7 +152,6 @@ class GraphDataset(InMemoryDataset):
 
             atoms_protein = np.zeros((len(atoms_protein_n), num_features))
             atoms_protein[np.arange(len(atoms_protein_n)), atoms_protein_n] = 1
-            atoms_protein[np.arange(len(atoms_protein_n)), 0] = 1
             atoms_protein = torch.as_tensor(atoms_protein)
 
             num_atoms_protein = len(nodes_dic)
@@ -171,8 +176,10 @@ class GraphDataset(InMemoryDataset):
 
             edges_both = torch.as_tensor([rows_both, cols_both])
 
-            edges_dis_lig = torch.ones(len(edges_ligand[0]))
-            edges_dis_pro = torch.ones(len(edges_protein[0]))
+            # edges_dis_lig = torch.ones(len(edges_ligand[0]))
+            edges_dis_lig = torch.as_tensor(edges_dis_l)
+            # edges_dis_pro = torch.ones(len(edges_protein[0]))
+            edges_dis_pro = torch.as_tensor(edges_dis_p)
             edges_dis_both = torch.as_tensor(edges_dis_both)
 
             atoms = torch.cat((atoms_ligand, atoms_protein))
