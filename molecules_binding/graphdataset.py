@@ -49,7 +49,7 @@ ele2num = {
     "I": 10,
     "Br": 11
 }
-num_features = len(ele2num) + 1
+num_features = len(ele2num) + 1 + 3
 
 
 class GraphDataset(Dataset):
@@ -189,8 +189,10 @@ class GraphDataset(Dataset):
             edges_atrr = torch.cat(
                 (edges_dis_lig, edges_dis_pro, edges_dis_both))
 
+            atoms_coords = torch.cat((atoms, coords), dim=1)
+
             data_list += [
-                Data(x=atoms,
+                Data(x=atoms_coords,
                      edge_index=edges,
                      pos=coords,
                      edge_attr=edges_atrr,

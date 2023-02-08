@@ -26,10 +26,15 @@ flags.DEFINE_float("train_perc", 0.8, "percentage of train-validation-split")
 
 flags.DEFINE_integer("batch_size", 32, "batch size")
 
-flags.DEFINE_integer("num_hidden", 30,
-                     "size of the new features after conv layer")
+# flags.DEFINE_integer("num_hidden", 30,
+#                      "size of the new features after conv layer")
+
+flags.DEFINE_multi_integer("num_hidden", [40, 30, 30],
+                           "size of the new features after conv layer")
 
 flags.DEFINE_integer("num_epochs", 30, "number of epochs")
+
+flags.DEFINE_float("learning_rate", 0.001, "learning rate")
 
 
 def plot_loss(errors_array):
@@ -102,7 +107,7 @@ def main(_):
     model = GraphNN(hidden_channels=FLAGS.num_hidden,
                     num_node_features=num_features)
     model.double()
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
+    optimizer = torch.optim.Adam(model.parameters(), lr=FLAGS.learning_rate)
     criterion = torch.nn.MSELoss()
 
     train_errors = []
