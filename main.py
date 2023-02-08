@@ -9,7 +9,7 @@ from torch import nn
 from molecules_binding.datasets import read_dataset
 from molecules_binding.datasets import get_affinities
 from molecules_binding.datasets import PDBDataset
-from mlp import MLP
+from models import MLP
 import matplotlib.pyplot as plt
 
 # from absl import app
