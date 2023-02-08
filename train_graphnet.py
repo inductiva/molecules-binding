@@ -14,6 +14,7 @@ from absl import app
 # import psutil
 import numpy as np
 from scipy.stats import spearmanr
+import pickle
 
 FLAGS = flags.FLAGS
 
@@ -35,6 +36,24 @@ flags.DEFINE_multi_integer("num_hidden", [40, 50, 30, 30],
 flags.DEFINE_integer("num_epochs", 30, "number of epochs")
 
 flags.DEFINE_float("learning_rate", 0.001, "learning rate")
+
+flags.DEFINE_string("path_error_train", None,
+                    "specify the path to store errors train")
+
+flags.mark_flag_as_required("path_error_train")
+
+flags.DEFINE_string("path_error_test", None,
+                    "specify the path to store errors test")
+
+flags.mark_flag_as_required("path_error_test")
+
+flags.DEFINE_string("path_preds", None, "specify the path to predictions")
+
+flags.mark_flag_as_required("path_preds")
+
+flags.DEFINE_string("path_reals", None, "specify the path to real values")
+
+flags.mark_flag_as_required("path_reals")
 
 
 def plot_loss(errors_array):
@@ -94,6 +113,11 @@ def statistics(preds, reals):
     return mae, mse, rmse, pearson_coef, correlation, p_value
 
 
+def store_list(somelist, path_list):
+    with open(path_list, "wb") as fp:
+        pickle.dump(somelist, fp)
+
+
 def main(_):
     dataset = torch.load(FLAGS.path_dataset)
     train_size = int(FLAGS.train_perc * len(dataset))
@@ -132,7 +156,13 @@ def main(_):
         train_errors += [train_err]
         test_errors += [test_err]
 
+    store_list(train_errors, FLAGS.path_error_train)
+    store_list(test_errors, FLAGS.path_error_test)
+
     preds, reals = test_final(stat_loader, model)
+
+    store_list(preds, FLAGS.path_preds)
+    store_list(reals, FLAGS.path_reals)
 
     mae, mse, rmse, pearson_coef, spearman_corr, spearman_p_value = \
         statistics(preds, reals)
