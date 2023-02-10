@@ -30,7 +30,7 @@ flags.DEFINE_integer("batch_size", 8, "batch size")
 # flags.DEFINE_integer("num_hidden", 30,
 #                      "size of the new features after conv layer")
 
-flags.DEFINE_multi_integer("num_hidden", [40, 50, 30, 30],
+flags.DEFINE_multi_integer("num_hidden", [40, 30, 30, 40],
                            "size of the new features after conv layer")
 
 flags.DEFINE_integer("num_epochs", 30, "number of epochs")
@@ -55,19 +55,24 @@ flags.DEFINE_string("path_reals", None, "specify the path to real values")
 
 flags.mark_flag_as_required("path_reals")
 
+flags.DEFINE_string("path_plots", None, "specify the path to store plots")
 
-def plot_loss(errors_array):
+flags.mark_flag_as_required("path_plots")
+
+flags.DEFINE_string("path_model", None, "specify the path to store model")
+
+flags.mark_flag_as_required("path_model")
+
+
+def plot_loss(errors_array, path_plot):
     plt.plot([elem.detach().cpu().numpy() for elem in errors_array])
     plt.xlabel("Epoch")
     plt.ylabel("Loss")
-    plt.savefig("../plots/loss")
+    plt.savefig(path_plot)
     plt.show()
 
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-
-def train(model, train_loader, criterion, optimizer):
+def train(model, train_loader, criterion, optimizer, device):
     model.train()
     for data in train_loader:
         data = data.to(device)
@@ -78,7 +83,7 @@ def train(model, train_loader, criterion, optimizer):
         optimizer.zero_grad()
 
 
-def test(loader, model, criterion):
+def test(loader, model, criterion, device):
     model.eval()
     mse = 0
     for data in loader:
@@ -89,7 +94,7 @@ def test(loader, model, criterion):
     return mse / len(loader)
 
 
-def test_final(loader, model):
+def test_final(loader, model, device):
     preds = []
     reals = []
     model.eval()
@@ -119,7 +124,9 @@ def store_list(somelist, path_list):
 
 
 def main(_):
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     dataset = torch.load(FLAGS.path_dataset)
+
     train_size = int(FLAGS.train_perc * len(dataset))
     test_size = len(dataset) - train_size
 
@@ -129,10 +136,10 @@ def main(_):
     train_loader = DataLoader(train_dataset,
                               batch_size=FLAGS.batch_size,
                               shuffle=True)
+
     test_loader = DataLoader(test_dataset,
                              batch_size=FLAGS.batch_size,
                              shuffle=False)
-
     stat_loader = DataLoader(test_dataset, batch_size=1, shuffle=False)
 
     model = GraphNN(hidden_channels=FLAGS.num_hidden,
@@ -145,11 +152,11 @@ def main(_):
     train_errors = []
     test_errors = []
     for epoch in range(1, FLAGS.num_epochs + 1):
-        train(model, train_loader, criterion, optimizer)
+        train(model, train_loader, criterion, optimizer, device)
         # print("RAM Used (GB):", psutil.virtual_memory()[3] / 1000000000)
-        train_err = test(train_loader, model, criterion)
+        train_err = test(train_loader, model, criterion, device)
         # print("RAM Used (GB):", psutil.virtual_memory()[3] / 1000000000)
-        test_err = test(test_loader, model, criterion)
+        test_err = test(test_loader, model, criterion, device)
         # print("RAM Used (GB):", psutil.virtual_memory()[3] / 1000000000)
         print(f"Epoch: {epoch:03d}, Train Error: {train_err:.4f}, \
                 Test Error: {test_err:.4f}")
@@ -159,7 +166,7 @@ def main(_):
     store_list(train_errors, FLAGS.path_error_train)
     store_list(test_errors, FLAGS.path_error_test)
 
-    preds, reals = test_final(stat_loader, model)
+    preds, reals = test_final(stat_loader, model, device)
 
     store_list(preds, FLAGS.path_preds)
     store_list(reals, FLAGS.path_reals)
@@ -172,8 +179,9 @@ def main(_):
           f"Spearman correlation is {spearman_corr}",
           f"Spearman p-value is {spearman_p_value}")
 
-    plot_loss(train_errors)
-    plot_loss(test_errors)
+    torch.save(model.cpu().state_dict(), FLAGS.path_model)
+    plot_loss(train_errors, FLAGS.path_plots)
+    plot_loss(test_errors, FLAGS.path_plots)
 
 
 if __name__ == "__main__":
