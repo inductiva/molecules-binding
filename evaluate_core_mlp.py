@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
 """
-Created on Fri Feb 10 17:52:59 2023
+Created on Sat Feb 11 19:31:55 2023
 
 @author: anaso
 """
 import torch
-from molecules_binding.models import GraphNN
-from molecules_binding.graphdataset import num_features
+from molecules_binding.models import MLP
+# from molecules_binding.graphdataset import num_features
 from torch_geometric.loader import DataLoader
 from absl import flags
 from absl import app
@@ -14,24 +14,19 @@ import numpy as np
 from scipy.stats import spearmanr
 
 FLAGS = flags.FLAGS
-flags.DEFINE_multi_integer("num_hidden", [128, 64, 64, 32],
+flags.DEFINE_multi_integer("num_hidden", [40, 30],
                            "size of the new features after conv layer")
 
-flags.DEFINE_string("path_dataset", "../../core_dataset",
-                    "specify the path to the stored processed dataset")
 
-flags.DEFINE_string("path_model", "../../resultados1212/model",
-                    "specify the path to the stored model")
-
-
-def test_final(loader, model, device):
+def test_final(loader, device, model):
     preds = []
     reals = []
     model.eval()
-    for data in loader:
-        data = data.to(device)
-        pred = model(data, data.batch)
-        real = data.y.unsqueeze(1)
+    for inputs, target in loader:
+        inputs = inputs.to(device)
+        target = target.to(device)
+        pred = model(inputs.double())
+        real = torch.unsqueeze(target, -1)
         preds += [pred.detach().cpu().numpy()[0][0]]
         reals += [real.detach().cpu().numpy()[0][0]]
     return np.array(preds), np.array(reals)
@@ -47,13 +42,14 @@ def statistics(preds, reals):
 
     return mae, mse, rmse, pearson_coef, correlation, p_value
 
+    # datasetcore = PDBDataset(pdb_files, aff_dict)
+
 
 def main(_):
 
     dataset = torch.load(FLAGS.path_dataset)
     device = torch.device("cpu")
-    model = GraphNN(hidden_channels=FLAGS.num_hidden,
-                    num_node_features=num_features)
+    model = MLP(17295, [100, 50])
     model.load_state_dict(torch.load(FLAGS.path_model))
     model = model.to(device)
     model = model.to(float)
@@ -61,7 +57,7 @@ def main(_):
 
     stat_loader = DataLoader(dataset, batch_size=1, shuffle=False)
 
-    preds, reals = test_final(stat_loader, model, device)
+    preds, reals = test_final(stat_loader, device, model)
 
     mae, mse, rmse, pearson_coef, spearman_corr, spearman_p_value = \
         statistics(preds, reals)

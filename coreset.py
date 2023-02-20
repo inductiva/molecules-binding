@@ -36,7 +36,8 @@ def read_dataset_core(directory):
         files = os.listdir(f)
         pdb_id = filename
 
-        pdb_files += [(pdb_id, os.path.join(f, files[3]),
+        # pdb_files += [(pdb_id, os.path.join(f, files[3]),
+        pdb_files += [(pdb_id, os.path.join(f, files[4]),
                        os.path.join(f, files[1]))]
 
     return pdb_files
