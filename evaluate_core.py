@@ -14,14 +14,11 @@ import numpy as np
 from scipy.stats import spearmanr
 
 FLAGS = flags.FLAGS
-flags.DEFINE_multi_integer("num_hidden", [128, 64, 64, 32],
+flags.DEFINE_multi_integer("num_hidden", [50, 40, 30, 30],
                            "size of the new features after conv layer")
 
 flags.DEFINE_string("path_dataset", "../../core_dataset",
                     "specify the path to the stored processed dataset")
-
-flags.DEFINE_string("path_model", "../../resultados1212/model",
-                    "specify the path to the stored model")
 
 
 def test_final(loader, model, device):
@@ -54,7 +51,7 @@ def main(_):
     device = torch.device("cpu")
     model = GraphNN(hidden_channels=FLAGS.num_hidden,
                     num_node_features=num_features)
-    model.load_state_dict(torch.load(FLAGS.path_model))
+    model.load_state_dict(torch.load("../../resultados01/model"))
     model = model.to(device)
     model = model.to(float)
     # model.eval()
