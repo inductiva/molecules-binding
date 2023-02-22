@@ -143,10 +143,10 @@ class GraphDataset(Dataset):
     """
     Args:
         pdb_files: list with triplets containing
-        name of compound (4 letters)
-        path to pdb file describing protein
-        path to sdf file describing ligand
-        mydir_aff: to remove later
+            name of compound (4 letters)
+            path to pdb file describing protein
+            path to sdf file describing ligand
+        aff_dict: dictionary that for each complex returns affinity data
     """
 
     def __init__(self, pdb_files, aff_d, threshold):
@@ -200,7 +200,7 @@ class GraphDataset(Dataset):
         return self.data_list[index]
 
 
-class PDBDataset(torch.utils.data.Dataset):
+class VectorDataset(torch.utils.data.Dataset):
     """ for a set of compounds will return their coordinates
     padded and flatten (both the ligand and protein)"""
 

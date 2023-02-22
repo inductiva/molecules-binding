@@ -8,7 +8,7 @@ Created on Tue Feb  7 09:37:53 2023
 import torch
 import os
 import re
-from molecules_binding.graphdataset import GraphDataset
+from molecules_binding.dataseta import GraphDataset
 from absl import flags
 from absl import app
 

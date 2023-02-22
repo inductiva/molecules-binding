@@ -6,9 +6,9 @@ Created on Fri Jan 13 17:46:38 2023
 """
 import torch
 from torch import nn
-from molecules_binding.datasets import read_dataset
-from molecules_binding.datasets import get_affinities
-from molecules_binding.datasets import PDBDataset
+from processdataset import read_dataset
+from processdataset import get_affinities
+from molecules_binding.datasets import VectorDataset
 from models import MLP
 import matplotlib.pyplot as plt
 
@@ -36,7 +36,7 @@ FLAGS(sys.argv)
 
 aff_dict = get_affinities(FLAGS.aff_dir)
 pdb_files = read_dataset(FLAGS.data_dir)
-dataset = PDBDataset(pdb_files, aff_dict)
+dataset = VectorDataset(pdb_files, aff_dict)
 
 train_size = int(FLAGS.train_size * len(dataset))
 test_size = len(dataset) - train_size
