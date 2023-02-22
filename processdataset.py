@@ -6,19 +6,20 @@ Created on Tue Feb  7 09:37:53 2023
 """
 
 import torch
-from molecules_binding.datasets import read_dataset
+import os
+import re
 from molecules_binding.graphdataset import GraphDataset
 from absl import flags
 from absl import app
 
 FLAGS = flags.FLAGS
 
-flags.DEFINE_string("aff_dir",
-                    "../../datasets/index/INDEX_general_PL_data.2020",
+flags.DEFINE_string("aff_dir", None,
                     "specify the path to the index of the dataset")
+flags.mark_flag_as_required("aff_dir")
 
-flags.DEFINE_string("data_dir", "../../datasets/refined-set",
-                    "specify the path to the dataset")
+flags.DEFINE_string("data_dir", None, "specify the path to the dataset")
+flags.mark_flag_as_required("data_dir")
 
 flags.DEFINE_string("path_dataset", None,
                     "specify the path to the stored processed dataset")
@@ -28,9 +29,44 @@ flags.DEFINE_float("threshold", 6,
                    "maximum length of edges between protein and ligand")
 
 
+def read_dataset(directory):
+    # creates a list of pdb_id, path to protein, path to ligand
+    pdb_files = []
+    for filename in os.listdir(directory):
+        f = os.path.join(directory, filename)
+        files = os.listdir(f)
+        pdb_id = filename
+        pdb_files += [(pdb_id, os.path.join(f, files[2]),
+                       os.path.join(f, files[1]))]
+
+    return pdb_files
+
+
+def get_affinities(dir_a):
+    # unity_conv = {"mM": -3, "uM": -6, "nM": -9, "pM": -12,"fM": -15}
+    aff_dict = {}
+    with open(dir_a, "r", encoding="utf-8") as f:
+        for line in f:
+            if line[0] != "#":
+                fields = line.split()
+                pdb_id = fields[0]
+                log_aff = float(fields[3])
+                aff_str = fields[4]
+                aff_tokens = re.split("[=<>~]+", aff_str)
+                assert len(aff_tokens) == 2
+                label, aff_unity = aff_tokens
+                assert label in ["Kd", "Ki", "IC50"]
+                affinity_value = float(aff_unity[:-2])
+                #exponent = unity_conv[aff_unity[-2:]]
+                aff = float(affinity_value)
+                aff_dict[pdb_id] = [label, aff, log_aff]
+    return aff_dict
+
+
 def create_dataset(direct: str, aff_dir: str, path: str, threshold: float):
     pdb_files = read_dataset(direct)
-    datasetg = GraphDataset(pdb_files, aff_dir, threshold)
+    aff_d = get_affinities(aff_dir)
+    datasetg = GraphDataset(pdb_files, aff_d, threshold)
     torch.save(datasetg, path)
 
 
