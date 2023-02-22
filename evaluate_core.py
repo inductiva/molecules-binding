@@ -1,3 +1,6 @@
+"""
+evaluate model on coreset
+"""
 import torch
 from molecules_binding.models import GraphNN
 from molecules_binding.graphdataset import num_features

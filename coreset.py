@@ -1,3 +1,6 @@
+"""
+create the class dataset from coreset
+"""
 import os
 import torch
 from molecules_binding.graphdataset import GraphDataset

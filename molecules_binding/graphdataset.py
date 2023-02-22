@@ -1,3 +1,6 @@
+"""
+define class graphdataset
+"""
 from torch_geometric.data import Data, Dataset
 # from torch_geometric.data import Data, InMemoryDataset
 import numpy as np

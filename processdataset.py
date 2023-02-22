@@ -1,3 +1,6 @@
+"""
+create class dataset from refinedset
+"""
 import torch
 from molecules_binding.datasets import read_dataset
 from molecules_binding.graphdataset import GraphDataset
