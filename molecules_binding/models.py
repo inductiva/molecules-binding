@@ -48,9 +48,12 @@ class GraphNN(MessagePassing):
         torch.manual_seed(12345)
         # self.conv1 = GCNConv(num_node_features, hidden_channels)
         self.gat1 = GATConv(num_node_features, hidden_channels[0])
-        self.conv2 = GCNConv(hidden_channels[0], hidden_channels[1])
-        self.conv3 = GCNConv(hidden_channels[1], hidden_channels[2])
-        self.lin = Linear(hidden_channels[2], 1)
+        self.gat2 = GATConv(hidden_channels[0], hidden_channels[1])
+        # self.gat3 = GATConv(hidden_channels[1], hidden_channels[2])
+        self.conv1 = GCNConv(hidden_channels[1], hidden_channels[2])
+        self.conv2 = GCNConv(hidden_channels[2], hidden_channels[3])
+        # self.lin1 = Linear(hidden_channels[3], hidden_channels[4])
+        self.lin1 = Linear(hidden_channels[3], 1)
 
     def forward(self, data, batch):
         """
@@ -61,15 +64,21 @@ class GraphNN(MessagePassing):
         # 1. Obtain node embeddings
         x = self.gat1(x, edge_index, edge_attrs)
         x = x.relu()
+        x = self.gat2(x, edge_index, edge_attrs)
+        x = x.relu()
+        # x = self.gat3(x, edge_index, edge_attrs)
+        # x = x.relu()
+        x = self.conv1(x, edge_index, edge_attrs)
+        x = x.relu()
         x = self.conv2(x, edge_index, edge_attrs)
         x = x.relu()
-        x = self.conv3(x, edge_index, edge_attrs)
-
         # 2. Readout layer
         x = global_mean_pool(x, batch)
 
         # 3. Apply a final classifier
         x = F.dropout(x, p=0.3, training=self.training)
-        x = self.lin(x)
+        x = self.lin1(x)
+        # x = x.relu()
+        # x = self.lin2(x)
 
         return x

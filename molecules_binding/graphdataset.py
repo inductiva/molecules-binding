@@ -49,7 +49,8 @@ ele2num = {
     "I": 10,
     "Br": 11
 }
-num_features = len(ele2num) + 1 + 3
+num_feat = len(ele2num) + 1
+num_features = num_feat + 3
 
 
 class GraphDataset(Dataset):
@@ -93,13 +94,12 @@ class GraphDataset(Dataset):
             ]
             num_atoms_ligand = len(atoms_ligand_e)
             atoms_ligand_n = [ele2num[atomtype] for atomtype in atoms_ligand_e]
-            atoms_ligand = np.zeros((num_atoms_ligand, num_features))
+            atoms_ligand = np.zeros((num_atoms_ligand, num_feat))
 
-            atoms_ligand = np.zeros((num_atoms_ligand, num_features))
+            atoms_ligand = np.zeros((num_atoms_ligand, num_feat))
             atoms_ligand[np.arange(num_atoms_ligand), atoms_ligand_n] = 1
             atoms_ligand[np.arange(num_atoms_ligand), 0] = 1
             atoms_ligand = torch.as_tensor(atoms_ligand)
-
             edges_directed = [[bond.GetBeginAtomIdx(),
                                bond.GetEndAtomIdx()]
                               for bond in structure_lig.GetBonds()]
@@ -150,10 +150,9 @@ class GraphDataset(Dataset):
                 ele2num[atomtype] for atomtype in atoms_protein_e
             ]
 
-            atoms_protein = np.zeros((len(atoms_protein_n), num_features))
+            atoms_protein = np.zeros((len(atoms_protein_n), num_feat))
             atoms_protein[np.arange(len(atoms_protein_n)), atoms_protein_n] = 1
             atoms_protein = torch.as_tensor(atoms_protein)
-
             num_atoms_protein = len(nodes_dic)
 
             # ----------- Protein + Ligand -------------------
