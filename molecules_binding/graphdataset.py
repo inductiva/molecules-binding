@@ -1,9 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Thu Jan 26 15:33:28 2023
-
-@author: anaso
-"""
 from torch_geometric.data import Data, Dataset
 # from torch_geometric.data import Data, InMemoryDataset
 import numpy as np

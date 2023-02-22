@@ -1,9 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Wed Feb  8 21:39:51 2023
-
-@author: anaso
-"""
 import os
 import torch
 from molecules_binding.graphdataset import GraphDataset

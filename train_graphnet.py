@@ -1,9 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Tue Jan 31 11:01:43 2023
-
-@author: anaso
-"""
 from molecules_binding.models import GraphNN
 from molecules_binding.graphdataset import num_features
 from torch_geometric.loader import DataLoader

@@ -1,9 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Tue Jan 31 17:31:25 2023
-
-@author: anaso
-"""
 import torch
 from torch import nn
 from torch.nn import Linear
