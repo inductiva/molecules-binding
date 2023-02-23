@@ -46,7 +46,7 @@ class GraphNN(MessagePassing):
         self.conv2 = GCNConv(hidden_channels[2], hidden_channels[3])
         self.lin1 = Linear(hidden_channels[3], 1)
 
-    def forward(self, data, batch, drop):
+    def forward(self, data, batch, dropout_rate):
         """
         Returns:
             x (float): affinity of the graph
@@ -63,7 +63,7 @@ class GraphNN(MessagePassing):
 
         x = global_mean_pool(x, batch)
 
-        x = F.dropout(x, p=drop, training=self.training)
+        x = F.dropout(x, p=dropout_rate, training=self.training)
         x = self.lin1(x)
 
         return x

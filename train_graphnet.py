@@ -30,6 +30,8 @@ flags.DEFINE_integer("num_epochs", 30, "number of epochs")
 
 flags.DEFINE_float("learning_rate", 0.001, "learning rate")
 
+flags.DEFINE_float("dropout_rate", 0.3, "Dropout rate")
+
 flags.DEFINE_string("path_error_train", None,
                     "specify the path to store errors train")
 
@@ -65,35 +67,35 @@ def plot_loss(errors_array, path_plot):
     plt.show()
 
 
-def train(model, train_loader, criterion, optimizer, device):
+def train(model, train_loader, criterion, optimizer, device, dropout_rate):
     model.train()
     for data in train_loader:
         data = data.to(device)
-        out = model(data, data.batch)
+        out = model(data, data.batch, dropout_rate)
         loss = criterion(out, data.y.unsqueeze(1))
         loss.backward()
         optimizer.step()
         optimizer.zero_grad()
 
 
-def test(loader, model, criterion, device):
+def test(loader, model, criterion, device, dropout_rate):
     model.eval()
     mse = 0
     for data in loader:
         data = data.to(device)
-        out = model(data, data.batch)
+        out = model(data, data.batch, dropout_rate)
         # print(out, data.y)
         mse += criterion(out, data.y.unsqueeze(1)).detach()
     return mse / len(loader)
 
 
-def test_final(loader, model, device):
+def test_final(loader, model, device, dropout_rate):
     preds = []
     reals = []
     model.eval()
     for data in loader:
         data = data.to(device)
-        pred = model(data, data.batch)
+        pred = model(data, data.batch, dropout_rate)
         real = data.y.unsqueeze(1)
         preds += [pred.detach().cpu().numpy()[0][0]]
         reals += [real.detach().cpu().numpy()[0][0]]
@@ -145,11 +147,14 @@ def main(_):
     train_errors = []
     test_errors = []
     for epoch in range(1, FLAGS.num_epochs + 1):
-        train(model, train_loader, criterion, optimizer, device)
+        train(model, train_loader, criterion, optimizer, device,
+              FLAGS.dropout_rate)
         # print("RAM Used (GB):", psutil.virtual_memory()[3] / 1000000000)
-        train_err = test(train_loader, model, criterion, device)
+        train_err = test(train_loader, model, criterion, device,
+                         FLAGS.dropout_rate)
         # print("RAM Used (GB):", psutil.virtual_memory()[3] / 1000000000)
-        test_err = test(test_loader, model, criterion, device)
+        test_err = test(test_loader, model, criterion, device,
+                        FLAGS.dropout_rate)
         # print("RAM Used (GB):", psutil.virtual_memory()[3] / 1000000000)
         print(f"Epoch: {epoch:03d}, Train Error: {train_err:.4f}, \
                 Test Error: {test_err:.4f}")
@@ -159,7 +164,7 @@ def main(_):
     store_list(train_errors, FLAGS.path_error_train)
     store_list(test_errors, FLAGS.path_error_test)
 
-    preds, reals = test_final(stat_loader, model, device)
+    preds, reals = test_final(stat_loader, model, device, FLAGS.dropout_rate)
 
     store_list(preds, FLAGS.path_preds)
     store_list(reals, FLAGS.path_reals)
