@@ -1,5 +1,5 @@
 """
-create the class dataset from coreset
+Process the coreset and stores it
 """
 import os
 import torch

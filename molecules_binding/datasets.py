@@ -1,5 +1,5 @@
 """
-define class dataset
+Define class dataset
 """
 import os
 import torch

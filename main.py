@@ -1,5 +1,5 @@
 """
-train mlp
+Train mlp
 """
 import torch
 from torch import nn

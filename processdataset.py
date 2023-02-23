@@ -1,5 +1,5 @@
 """
-create class dataset from refinedset
+Create class dataset from refinedset
 """
 import torch
 from molecules_binding.datasets import read_dataset

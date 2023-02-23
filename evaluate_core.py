@@ -1,5 +1,5 @@
 """
-evaluate model on coreset
+Evaluate model on coreset
 """
 import torch
 from molecules_binding.models import GraphNN
