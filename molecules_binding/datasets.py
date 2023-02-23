@@ -140,7 +140,7 @@ def vector2onehot(vector, n_features):
 
 class GraphDataset(Dataset):
     """ builds the graph for each complex"""
-    
+
     def __init__(self, pdb_files, aff_d, threshold):
         """
         Args:
@@ -202,7 +202,7 @@ class GraphDataset(Dataset):
 
 
 class VectorDataset(torch.utils.data.Dataset):
-    """ constructs a vector with coordinates padded and flatten 
+    """ constructs a vector with coordinates padded and flatten
     (both the ligand and protein) and one-hot chemical element"""
 
     def __init__(self, pdb_files, aff_dict):
@@ -272,14 +272,12 @@ class VectorDataset(torch.utils.data.Dataset):
         coords_p, coords_l, affinity = self.data[index]
 
         coords_p = torch.nn.functional.pad(
-            coords_p,
-            (0, 0, 0, self.max_len_p - coords_p.shape[0]),
+            coords_p, (0, 0, 0, self.max_len_p - coords_p.shape[0]),
             mode="constant",
             value=None)
 
         coords_l = torch.nn.functional.pad(
-            coords_l,
-            (0, 0, 0, self.max_len_l - coords_l.shape[0]),
+            coords_l, (0, 0, 0, self.max_len_l - coords_l.shape[0]),
             mode="constant",
             value=None)
 
