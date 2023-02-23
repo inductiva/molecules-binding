@@ -4,7 +4,7 @@ Create class dataset from refinedset
 import torch
 import os
 import re
-from molecules_binding.graphdataset import GraphDataset
+from molecules_binding.datasets import GraphDataset
 from absl import flags
 from absl import app
 
