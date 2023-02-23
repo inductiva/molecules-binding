@@ -1,4 +1,4 @@
 # pylint: disable=missing-module-docstring
 
-from . import datasets
+from .datasets import *
 from .models import *

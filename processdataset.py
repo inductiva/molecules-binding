@@ -1,10 +1,6 @@
-# -*- coding: utf-8 -*-
 """
-Created on Tue Feb  7 09:37:53 2023
-
-@author: anaso
+Create class dataset from refinedset
 """
-
 import torch
 import os
 import re

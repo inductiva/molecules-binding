@@ -1,8 +1,5 @@
-# -*- coding: utf-8 -*-
 """
-Created on Thu Jan 26 15:33:28 2023
-
-@author: anaso
+define class graphdataset
 """
 from torch_geometric.data import Data, Dataset
 import numpy as np

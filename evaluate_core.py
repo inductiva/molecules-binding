@@ -1,8 +1,5 @@
-# -*- coding: utf-8 -*-
 """
-Created on Fri Feb 10 17:52:59 2023
-
-@author: anaso
+Evaluate model on coreset
 """
 import torch
 from molecules_binding.models import GraphNN

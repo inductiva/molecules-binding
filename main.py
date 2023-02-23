@@ -1,8 +1,5 @@
-# -*- coding: utf-8 -*-
 """
-Created on Fri Jan 13 17:46:38 2023
-
-@author: anaso
+Train mlp
 """
 import torch
 from torch import nn

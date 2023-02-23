@@ -1,10 +1,6 @@
-# -*- coding: utf-8 -*-
-'''
-Created on Fri Jan 13 16:45:27 2023
-
-@author: anaso
-'''
-
+"""
+Define class dataset
+"""
 import os
 import torch
 from Bio.PDB import PDBParser
