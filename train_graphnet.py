@@ -17,15 +17,11 @@ FLAGS = flags.FLAGS
 
 flags.DEFINE_string("path_dataset", None,
                     "specify the path to the stored processed dataset")
-
 flags.mark_flag_as_required("path_dataset")
 
 flags.DEFINE_float("train_perc", 0.8, "percentage of train-validation-split")
 
 flags.DEFINE_integer("batch_size", 8, "batch size")
-
-# flags.DEFINE_integer("num_hidden", 30,
-#                      "size of the new features after conv layer")
 
 flags.DEFINE_multi_integer("num_hidden", [40, 30, 30, 40],
                            "size of the new features after conv layer")
