@@ -72,7 +72,6 @@ def ligand_info(path_ligand):
     return (pos_l, atoms_ligand, edges_ligand, edges_dis_lig, num_atoms_ligand)
 
 
-
 def protein_info(path_protein, num_atoms_ligand):
     g = construct_graph(config=config, pdb_path=path_protein)
 
@@ -112,9 +111,8 @@ def protein_info(path_protein, num_atoms_ligand):
             num_atoms_protein)
 
 
-
-def create_edges_protein_ligand(num_atoms_ligand, num_atoms_protein, 
-                                pos_l, pos_p, threshold):
+def create_edges_protein_ligand(num_atoms_ligand, num_atoms_protein, pos_l,
+                                pos_p, threshold):
     edges_dis_both = []
     rows_both = []
     cols_both = []
@@ -133,23 +131,26 @@ def create_edges_protein_ligand(num_atoms_ligand, num_atoms_protein,
     edges_dis_both = torch.as_tensor(edges_dis_both)
     return edges_both, edges_dis_both
 
-def vector2onehot(vector, num_feat):
-    onehotvector = np.zeros((len(vector), num_feat))
+
+def vector2onehot(vector, n_features):
+    onehotvector = np.zeros((len(vector), n_features))
     onehotvector[np.arange(len(vector)), vector] = 1
     return onehotvector
 
 
 class GraphDataset(Dataset):
-    """
-    Args:
-        pdb_files: list with triplets containing
-            name of compound (4 letters)
-            path to pdb file describing protein
-            path to sdf file describing ligand
-        aff_dict: dictionary that for each complex returns affinity data
-    """
-
+    """ builds the graph for each complex"""
+    
     def __init__(self, pdb_files, aff_d, threshold):
+        """
+        Args:
+            pdb_files: list with triplets containing
+                name of compound (4 letters)
+                path to pdb file describing protein
+                path to sdf file describing ligand
+            aff_dict: dictionary that for each complex returns affinity data
+            threshold: maximum length of edge connecting protein and ligand
+        """
         super().__init__("GraphDataset")
         self.dataset_len = len(pdb_files)
 
@@ -201,8 +202,8 @@ class GraphDataset(Dataset):
 
 
 class VectorDataset(torch.utils.data.Dataset):
-    """ for a set of compounds will return their coordinates
-    padded and flatten (both the ligand and protein)"""
+    """ constructs a vector with coordinates padded and flatten 
+    (both the ligand and protein) and one-hot chemical element"""
 
     def __init__(self, pdb_files, aff_dict):
         """
@@ -222,7 +223,7 @@ class VectorDataset(torch.utils.data.Dataset):
         data = []
 
         for comp_name, path_protein, path_ligand in pdb_files:
-            
+
             # ------------ Protein -------------
             g = construct_graph(config=config, pdb_path=path_protein)
             nodes_dic = {}
@@ -231,14 +232,13 @@ class VectorDataset(torch.utils.data.Dataset):
 
             nodes_list = list(nodes_dic.values())
             coord_p = [attr[2].tolist() for attr in nodes_list]
-            
+
             max_len_p = max(max_len_p, len(coord_p))
 
             elem_p = [attr[1] for attr in nodes_list]
-            # elem_p = [atom.element for atom in structure_pro.get_atoms()]
             elem_p_n = [ele2num[i] for i in elem_p]
 
-            onehotelem_p = vector2onehot(elem_p_n, num_features)
+            onehotelem_p = vector2onehot(elem_p_n, num_feat)
             onehotelem_p[np.arange(len(elem_p_n)), 0] = 1
 
             # ------------ Ligand -------------
@@ -250,7 +250,7 @@ class VectorDataset(torch.utils.data.Dataset):
             elem_l = [atom.GetSymbol() for atom in structure_lig.GetAtoms()]
 
             elem_l_n = [ele2num[i] for i in elem_l]
-            onehotelem_l = vector2onehot(elem_l_n, num_features)
+            onehotelem_l = vector2onehot(elem_l_n, num_feat)
 
             max_len_l = max(max_len_l, len(coord_l))
 
@@ -272,14 +272,14 @@ class VectorDataset(torch.utils.data.Dataset):
         coords_p, coords_l, affinity = self.data[index]
 
         coords_p = torch.nn.functional.pad(
-            coords_p, (0, 0, 0, self.max_len_p - coords_p.shape[0]),
-            # coords_p, (0, 0, 0, 978 - coords_p.shape[0]),
+            coords_p,
+            (0, 0, 0, self.max_len_p - coords_p.shape[0]),
             mode="constant",
             value=None)
 
         coords_l = torch.nn.functional.pad(
-            coords_l, (0, 0, 0, self.max_len_l - coords_l.shape[0]),
-            # coords_l, (0, 0, 0, 175 - coords_l.shape[0]),
+            coords_l,
+            (0, 0, 0, self.max_len_l - coords_l.shape[0]),
             mode="constant",
             value=None)
 
