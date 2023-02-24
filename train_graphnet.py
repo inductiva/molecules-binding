@@ -149,15 +149,17 @@ def main(_):
     for epoch in range(1, FLAGS.num_epochs + 1):
         train(model, train_loader, criterion, optimizer, device,
               FLAGS.dropout_rate)
+        # print("RAM Used (GB):", psutil.virtual_memory()[3] / 1000000000)
         train_err = test(train_loader, model, criterion, device,
                          FLAGS.dropout_rate)
+        # print("RAM Used (GB):", psutil.virtual_memory()[3] / 1000000000)
         test_err = test(test_loader, model, criterion, device,
                         FLAGS.dropout_rate)
-        train_errors += [train_err]
-        test_errors += [test_err]
-
+        # print("RAM Used (GB):", psutil.virtual_memory()[3] / 1000000000)
         print(f"Epoch: {epoch:03d}, Train Error: {train_err:.4f}, \
                 Test Error: {test_err:.4f}")
+        train_errors += [train_err]
+        test_errors += [test_err]
 
     store_list(train_errors, FLAGS.path_error_train)
     store_list(test_errors, FLAGS.path_error_test)
