@@ -34,92 +34,145 @@ params_to_change = {
 config = ProteinGraphConfig(**params_to_change)
 
 
+def vector2onehot(vector, n_features):
+    onehotvector = np.zeros((len(vector), n_features))
+    onehotvector[np.arange(len(vector)), vector] = 1
+    return onehotvector
+
+
 def ligand_info(path_ligand):
+    """
+    Parameters
+    ----------
+    path_ligand : string
+        path to the ligand .sdf file.
+
+    Returns
+    -------
+    ligand_coord : numpy.ndarray
+        array of coordinates of ligand.
+    atoms_ligand : torch.Tensor
+        tensor with one-hot representations of each atom.
+    edges_ligand : torch.Tensor
+        tensor of the edges between nodes in ligand.
+    edges_length_ligand : torch.Tensor
+        tensor containing edge lengths.
+    num_atoms_ligand : int
+        number of atoms of ligand molecule.
+
+    """
     structure_lig = Chem.SDMolSupplier(path_ligand, sanitize=False)[0]
     conf_lig = structure_lig.GetConformer()
     # coordinates of ligand
-    pos_l = conf_lig.GetPositions()
+    ligand_coord = conf_lig.GetPositions()
 
-    atoms_ligand_e = [atom.GetSymbol() for atom in structure_lig.GetAtoms()]
-    num_atoms_ligand = len(atoms_ligand_e)
-    atoms_ligand_n = [ele2num[atomtype] for atomtype in atoms_ligand_e]
-    atoms_ligand = np.zeros((num_atoms_ligand, num_feat))
+    # list of element symbols (eg. "H", "O")
+    ligand_elems = [atom.GetSymbol() for atom in structure_lig.GetAtoms()]
+    num_atoms_ligand = len(ligand_elems)
+    # list of corresponding number for each symbol (eg. "H" -> 1)
+    ligand_elems_num = [ele2num[atomtype] for atomtype in ligand_elems]
 
-    atoms_ligand = np.zeros((num_atoms_ligand, num_feat))
-    atoms_ligand[np.arange(num_atoms_ligand), atoms_ligand_n] = 1
+    atoms_ligand = vector2onehot(ligand_elems_num, num_feat)
     atoms_ligand[np.arange(num_atoms_ligand), 0] = 1
     atoms_ligand = torch.as_tensor(atoms_ligand)
-    edges_directed = [[bond.GetBeginAtomIdx(),
-                       bond.GetEndAtomIdx()]
-                      for bond in structure_lig.GetBonds()]
-    edges_bi = []
-    for edge in edges_directed:
-        i, j = edge
-        edges_bi += [[i, j], [j, i]]
-    rows_l = [edge[0] for edge in edges_bi]
-    cols_l = [edge[1] for edge in edges_bi]
-    edges_ligand = torch.tensor([rows_l, cols_l])
 
-    edges_dis_l = []
-    for edge in edges_directed:
-        dis = np.linalg.norm(pos_l[edge[0]] - pos_l[edge[1]])
-        edges_dis_l += [dis, dis]
-    edges_dis_lig = torch.as_tensor(edges_dis_l)
+    rows_l = []
+    cols_l = []
 
-    return (pos_l, atoms_ligand, edges_ligand, edges_dis_lig, num_atoms_ligand)
+    edges_length_ligand = []
+    for bond in structure_lig.GetBonds():
+        i = bond.GetBeginAtomIdx()
+        j = bond.GetEndAtomIdx()
+        rows_l += [i, j]
+        cols_l += [j, i]
+        length = np.linalg.norm(ligand_coord[i] - ligand_coord[j])
+        edges_length_ligand += [length, length]
+
+    edges_ligand = torch.as_tensor([rows_l, cols_l])
+    edges_length_ligand = torch.as_tensor(edges_length_ligand)
+
+    return (ligand_coord, atoms_ligand, edges_ligand, edges_length_ligand,
+            num_atoms_ligand)
 
 
 def protein_info(path_protein, num_atoms_ligand):
+    """
+    Parameters
+    ----------
+    path_protein : string
+        path to the protein .pdb file.
+    num_atoms_ligand: int
+        number of atoms of ligand molecule
+
+    Returns
+    -------
+    protein_coord : numpy.ndarray
+        array of coordinates of protein.
+    atoms_protein : torch.Tensor
+        tensor with one-hot representations of each atom.
+    edges_protein : torch.Tensor
+        tensor of the edges between nodes in protein.
+    edges_length_protein : torch.Tensor
+        tensor containing edge lengths.
+    num_atoms_protein : int
+        number of atoms of protein molecule.
+
+    """
     g = construct_graph(config=config, pdb_path=path_protein)
 
-    nodes_dic = {}
+    # dictionary for each node returns id number, element symbol, coordinates
+    # eg. 'B:LEU:165:CD1': [1073, 'C', array([47.367,  3.943, 37.864])]
+    nodes_dict = {}
     for i, (ident, d) in enumerate(g.nodes(data=True)):
-        nodes_dic[ident] = [
+        nodes_dict[ident] = [
             i + num_atoms_ligand, d["element_symbol"], d["coords"]
         ]
 
+    num_atoms_protein = len(nodes_dict)
+
     rows_p = []
     cols_p = []
-    edges_dis_p = []
-    for u, v, a in g.edges(data=True):
-        id1 = nodes_dic[u][0]
-        id2 = nodes_dic[v][0]
+    edges_length_protein = []
+    for u, v, attr in g.edges(data=True):
+        id1 = nodes_dict[u][0]
+        id2 = nodes_dict[v][0]
 
         rows_p += [id1, id2]
         cols_p += [id2, id1]
-
-        edges_dis_p += [a["bond_length"], a["bond_length"]]
-    edges_dis_pro = torch.as_tensor(edges_dis_p)
+        edges_length_protein += [attr["bond_length"], attr["bond_length"]]
 
     edges_protein = torch.as_tensor([rows_p, cols_p])
-    nodes_list = list(nodes_dic.values())
+    edges_length_protein = torch.as_tensor(edges_length_protein)
 
-    pos_p = [attr[2].tolist() for attr in nodes_list]
+    protein_coord = []
+    protein_elems_num = []
+    for _, elem, coord in nodes_dict.values():
+        protein_coord += [coord.tolist()]
+        protein_elems_num += [ele2num[elem]]
 
-    atoms_protein_e = [attr[1] for attr in nodes_list]
-    atoms_protein_n = [ele2num[atomtype] for atomtype in atoms_protein_e]
-
-    atoms_protein = np.zeros((len(atoms_protein_n), num_feat))
-    atoms_protein[np.arange(len(atoms_protein_n)), atoms_protein_n] = 1
+    atoms_protein = vector2onehot(protein_elems_num, num_feat)
     atoms_protein = torch.as_tensor(atoms_protein)
-    num_atoms_protein = len(nodes_dic)
 
-    return (pos_p, atoms_protein, edges_protein, edges_dis_pro,
+    return (protein_coord, atoms_protein, edges_protein, edges_length_protein,
             num_atoms_protein)
 
 
-def create_edges_protein_ligand(num_atoms_ligand, num_atoms_protein, pos_l,
-                                pos_p, threshold):
+def create_edges_protein_ligand(num_atoms_ligand, num_atoms_protein,
+                                ligand_coord, protein_coord, threshold):
+    """
+    Builds the edges between protein and ligand molecules, with length
+    under a threshold
+    """
     edges_dis_both = []
     rows_both = []
     cols_both = []
 
     for atom_l in range(num_atoms_ligand):
-        for atom_p in range(num_atoms_protein - num_atoms_ligand):
-            posl = pos_l[atom_l]
-            posp = pos_p[atom_p]
+        for atom_p in range(num_atoms_protein):
+            posl = ligand_coord[atom_l]
+            posp = protein_coord[atom_p]
             dis = np.linalg.norm(posl - posp)
-            if dis < threshold:
+            if dis <= threshold:
                 rows_both += [atom_l, num_atoms_ligand + atom_p]
                 cols_both += [num_atoms_ligand + atom_p, atom_l]
                 edges_dis_both += [dis, dis]
@@ -127,12 +180,6 @@ def create_edges_protein_ligand(num_atoms_ligand, num_atoms_protein, pos_l,
     edges_both = torch.as_tensor([rows_both, cols_both])
     edges_dis_both = torch.as_tensor(edges_dis_both)
     return edges_both, edges_dis_both
-
-
-def vector2onehot(vector, n_features):
-    onehotvector = np.zeros((len(vector), n_features))
-    onehotvector[np.arange(len(vector)), vector] = 1
-    return onehotvector
 
 
 class GraphDataset(Dataset):
@@ -155,27 +202,28 @@ class GraphDataset(Dataset):
 
         for comp_name, path_protein, path_ligand in pdb_files:
 
-            (pos_l, atoms_ligand, edges_ligand, edges_dis_lig,
+            (ligand_coord, atoms_ligand, edges_ligand, edges_length_ligand,
              num_atoms_ligand) = ligand_info(path_ligand)
 
-            (pos_p, atoms_protein, edges_protein, edges_dis_pro,
+            (protein_coord, atoms_protein, edges_protein, edges_length_protein,
              num_atoms_protein) = protein_info(path_protein, num_atoms_ligand)
 
             edges_both, edges_dis_both = create_edges_protein_ligand(
-                num_atoms_ligand, num_atoms_protein, pos_l, pos_p, threshold)
+                num_atoms_ligand, num_atoms_protein, ligand_coord,
+                protein_coord, threshold)
 
             # concatenate ligand and protein info
 
             atoms = torch.cat((atoms_ligand, atoms_protein))
 
-            coords_ligand = torch.as_tensor(pos_l)
-            coords_protein = torch.as_tensor(pos_p)
+            coords_ligand = torch.as_tensor(ligand_coord)
+            coords_protein = torch.as_tensor(protein_coord)
             coords = torch.cat((coords_ligand, coords_protein))
 
             edges = torch.cat((edges_ligand, edges_protein, edges_both), dim=1)
 
             edges_atrr = torch.cat(
-                (edges_dis_lig, edges_dis_pro, edges_dis_both))
+                (edges_length_ligand, edges_length_protein, edges_dis_both))
 
             atoms_coords = torch.cat((atoms, coords), dim=1)
 
