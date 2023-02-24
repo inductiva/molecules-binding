@@ -24,17 +24,18 @@ flags.mark_flag_as_required("path_dataset")
 flags.DEFINE_float("threshold", 6,
                    "maximum length of edges between protein and ligand")
 
-flags.DEFINE_enum("which_dataset", "refined_set", ["refined_set", "core_set"],
-                  "choose between refined_set or core_set")
+flags.DEFINE_string("which_dataset", None,
+                    "write 'r' if refinedset, 'c' if coreset")
+flags.mark_flag_as_required("which_dataset")
 
 
 def read_dataset(directory, which_dataset):
     # creates a list of pdb_id, path to protein, path to ligand
     pdb_files = []
-    assert which_dataset in ("refined_set", "core_set")
-    if which_dataset == "refined_set":
+    assert which_dataset in ("r", "c")
+    if which_dataset == "r":
         index = 2
-    elif which_dataset == "core_set":
+    elif which_dataset == "c":
         index = 3
 
     for filename in os.listdir(directory):
