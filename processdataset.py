@@ -24,15 +24,24 @@ flags.mark_flag_as_required("path_dataset")
 flags.DEFINE_float("threshold", 6,
                    "maximum length of edges between protein and ligand")
 
+flags.DEFINE_enum("which_dataset", "refined_set", ["refined_set", "core_set"],
+                  "either refined_set or core_set")
+flags.mark_flag_as_required("which_dataset")
 
-def read_dataset(directory):
+
+def read_dataset(directory, which_dataset):
     # creates a list of pdb_id, path to protein, path to ligand
     pdb_files = []
+    if which_dataset == "refined_set":
+        index = 2
+    elif which_dataset == "core_set":
+        index = 3
+
     for filename in os.listdir(directory):
         f = os.path.join(directory, filename)
         files = os.listdir(f)
         pdb_id = filename
-        pdb_files += [(pdb_id, os.path.join(f, files[2]),
+        pdb_files += [(pdb_id, os.path.join(f, files[index]),
                        os.path.join(f, files[1]))]
 
     return pdb_files
@@ -59,8 +68,9 @@ def get_affinities(dir_a):
     return aff_dict
 
 
-def create_dataset(direct: str, aff_dir: str, path: str, threshold: float):
-    pdb_files = read_dataset(direct)
+def create_dataset(direct: str, aff_dir: str, path: str, threshold: float,
+                   which_dataset: str):
+    pdb_files = read_dataset(direct, which_dataset)
     aff_d = get_affinities(aff_dir)
     datasetg = GraphDataset(pdb_files, aff_d, threshold)
     torch.save(datasetg, path)
@@ -68,7 +78,7 @@ def create_dataset(direct: str, aff_dir: str, path: str, threshold: float):
 
 def main(_):
     create_dataset(FLAGS.data_dir, FLAGS.aff_dir, FLAGS.path_dataset,
-                   FLAGS.threshold)
+                   FLAGS.threshold, FLAGS.which_dataset)
 
 
 if __name__ == "__main__":
