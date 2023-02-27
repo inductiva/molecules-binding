@@ -2,9 +2,8 @@
 Create class dataset from refinedset
 """
 import torch
-import os
-import re
 from molecules_binding.datasets import GraphDataset
+from molecules_binding.parsers import read_dataset, get_affinities
 from absl import flags
 from absl import app
 
@@ -27,45 +26,6 @@ flags.DEFINE_float("threshold", 6,
 flags.DEFINE_enum("which_dataset", "refined_set", ["refined_set", "core_set"],
                   "either refined_set or core_set")
 flags.mark_flag_as_required("which_dataset")
-
-
-def read_dataset(directory, which_dataset):
-    # creates a list of pdb_id, path to protein, path to ligand
-    pdb_files = []
-    if which_dataset == "refined_set":
-        index = 2
-    elif which_dataset == "core_set":
-        index = 3
-
-    for filename in os.listdir(directory):
-        f = os.path.join(directory, filename)
-        files = os.listdir(f)
-        pdb_id = filename
-        pdb_files += [(pdb_id, os.path.join(f, files[index]),
-                       os.path.join(f, files[1]))]
-
-    return pdb_files
-
-
-def get_affinities(dir_a):
-    # unity_conv = {"mM": -3, "uM": -6, "nM": -9, "pM": -12,"fM": -15}
-    aff_dict = {}
-    with open(dir_a, "r", encoding="utf-8") as f:
-        for line in f:
-            if line[0] != "#":
-                fields = line.split()
-                pdb_id = fields[0]
-                log_aff = float(fields[3])
-                aff_str = fields[4]
-                aff_tokens = re.split("[=<>~]+", aff_str)
-                assert len(aff_tokens) == 2
-                label, aff_unity = aff_tokens
-                assert label in ["Kd", "Ki", "IC50"]
-                affinity_value = float(aff_unity[:-2])
-                #exponent = unity_conv[aff_unity[-2:]]
-                aff = float(affinity_value)
-                aff_dict[pdb_id] = [label, aff, log_aff]
-    return aff_dict
 
 
 def create_dataset(direct: str, aff_dir: str, path: str, threshold: float,
