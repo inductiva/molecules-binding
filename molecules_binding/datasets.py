@@ -269,42 +269,19 @@ class VectorDataset(torch.utils.data.Dataset):
 
         for comp_name, path_protein, path_ligand in pdb_files:
 
-            # ------------ Protein -------------
-            g = construct_graph(config=config, pdb_path=path_protein)
-            nodes_dic = {}
-            for i, (ident, d) in enumerate(g.nodes(data=True)):
-                nodes_dic[ident] = [i, d["element_symbol"], d["coords"]]
+            (ligand_coord, atoms_ligand, _, _,
+             num_atoms_ligand) = ligand_info(path_ligand)
 
-            nodes_list = list(nodes_dic.values())
-            coord_p = [attr[2].tolist() for attr in nodes_list]
+            (protein_coord, atoms_protein, _, _,
+             num_atoms_protein) = protein_info(path_protein, num_atoms_ligand)
 
-            max_len_p = max(max_len_p, len(coord_p))
+            max_len_l = max(max_len_l, num_atoms_ligand)
+            max_len_p = max(max_len_p, num_atoms_protein)
 
-            elem_p = [attr[1] for attr in nodes_list]
-            elem_p_n = [ele2num[i] for i in elem_p]
-
-            onehotelem_p = vector2onehot(elem_p_n, num_feat)
-            onehotelem_p[np.arange(len(elem_p_n)), 0] = 1
-
-            # ------------ Ligand -------------
-
-            structure_lig = Chem.SDMolSupplier(path_ligand, sanitize=False)[0]
-            conf_lig = structure_lig.GetConformer()
-            coord_l = conf_lig.GetPositions()
-
-            elem_l = [atom.GetSymbol() for atom in structure_lig.GetAtoms()]
-
-            elem_l_n = [ele2num[i] for i in elem_l]
-            onehotelem_l = vector2onehot(elem_l_n, num_feat)
-
-            max_len_l = max(max_len_l, len(coord_l))
-
-            data += [
-                (torch.as_tensor(np.concatenate((onehotelem_p, coord_p),
-                                                axis=1)),
-                 torch.as_tensor(np.concatenate(
-                     (onehotelem_l, coord_l), axis=1)), aff_dict[comp_name][2])
-            ]
+            data += [(torch.cat((torch.as_tensor(ligand_coord), atoms_ligand),
+                                dim=1),
+                      torch.cat((torch.as_tensor(protein_coord), atoms_protein),
+                                dim=1), aff_dict[comp_name][2])]
 
         self.data = data
         self.max_len_p = max_len_p
