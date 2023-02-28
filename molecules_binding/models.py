@@ -1,9 +1,7 @@
 """
 Define models
 """
-import torch
 from torch import nn
-from torch.nn import Linear
 import torch.nn.functional as F
 from torch_geometric.nn import GCNConv
 from torch_geometric.nn import GATConv
@@ -16,14 +14,18 @@ class MLP(nn.Module):
 
     def __init__(self, input_size, hidden_size, output_size):
         super().__init__()
-        self.fc1 = nn.Linear(input_size, hidden_size)
-        self.relu = nn.ReLU()
-        self.fc2 = nn.Linear(hidden_size, output_size)
+
+        layer_sizes = [input_size] + hidden_size
+        layers = []
+        for ins, outs in list(zip(layer_sizes, layer_sizes[1:])):
+            layers.append(nn.Linear(ins, outs))
+            layers.append(nn.ReLU())
+        layers.append(nn.Linear(layer_sizes[-1], output_size))
+
+        self.layers = nn.Sequential(*layers)
 
     def forward(self, x):
-        x = self.fc1(x)
-        x = self.relu(x)
-        x = self.fc2(x)
+        x = self.layers(x)
         return x
 
 
@@ -39,12 +41,22 @@ class GraphNN(MessagePassing):
             num_node_features (int): Initial number of node features
         """
         super().__init__(aggr='add')
-        torch.manual_seed(12345)
-        self.gat1 = GATConv(num_node_features, hidden_channels[0])
-        self.gat2 = GATConv(hidden_channels[0], hidden_channels[1])
-        self.conv1 = GCNConv(hidden_channels[1], hidden_channels[2])
-        self.conv2 = GCNConv(hidden_channels[2], hidden_channels[3])
-        self.lin1 = Linear(hidden_channels[3], 1)
+
+        layer_sizes = [num_node_features] + hidden_channels
+
+        layers = []
+        pairs = list(zip(layer_sizes, layer_sizes[1:]))
+
+        for ins, outs in pairs[:-1]:
+            layers.append(GATConv(ins, outs))
+            layers.append(nn.ReLU())
+
+        for ins, outs in pairs[-1]:
+            layers.append(GCNConv(ins, outs))
+            layers.append(nn.ReLU())
+
+        self.layers = nn.Sequential(*layers)
+        self.lin = nn.Linear(layer_sizes[-1], 1)
 
     def forward(self, data, batch, dropout_rate):
         """
@@ -52,18 +64,11 @@ class GraphNN(MessagePassing):
             x (float): affinity of the graph
         """
         x, edge_index, edge_attrs = data.x, data.edge_index, data.edge_attr
-        x = self.gat1(x, edge_index, edge_attrs)
-        x = x.relu()
-        x = self.gat2(x, edge_index, edge_attrs)
-        x = x.relu()
-        x = self.conv1(x, edge_index, edge_attrs)
-        x = x.relu()
-        x = self.conv2(x, edge_index, edge_attrs)
-        x = x.relu()
+        x = self.layers(x, edge_index, edge_attrs)
 
         x = global_mean_pool(x, batch)
 
         x = F.dropout(x, p=dropout_rate, training=self.training)
-        x = self.lin1(x)
+        x = self.lin(x)
 
         return x
