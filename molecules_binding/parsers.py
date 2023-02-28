@@ -190,7 +190,6 @@ def protein_info(path_protein, num_atoms_ligand):
     for _, elem, coord in nodes_dict.values():
         protein_coord += [coord.tolist()]
         protein_elems_num += [ele2num[elem]]
-
     atoms_protein = vector2onehot(protein_elems_num, num_feat)
     atoms_protein = torch.as_tensor(atoms_protein)
 
