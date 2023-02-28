@@ -43,19 +43,16 @@ class GraphNN(MessagePassing):
         super().__init__(aggr='add')
 
         layer_sizes = [num_node_features] + hidden_channels
-
         layers = []
         pairs = list(zip(layer_sizes, layer_sizes[1:]))
 
         for ins, outs in pairs[:-1]:
             layers.append(GATConv(ins, outs))
-            layers.append(nn.ReLU())
 
-        for ins, outs in pairs[-1]:
-            layers.append(GCNConv(ins, outs))
-            layers.append(nn.ReLU())
+        (ins, outs) = pairs[-1]
+        layers.append(GCNConv(ins, outs))
 
-        self.layers = nn.Sequential(*layers)
+        self.layers = nn.ModuleList(layers)
         self.lin = nn.Linear(layer_sizes[-1], 1)
 
     def forward(self, data, batch, dropout_rate):
@@ -64,7 +61,10 @@ class GraphNN(MessagePassing):
             x (float): affinity of the graph
         """
         x, edge_index, edge_attrs = data.x, data.edge_index, data.edge_attr
-        x = self.layers(x, edge_index, edge_attrs)
+
+        for layer in self.layers:
+            x = layer(x, edge_index, edge_attrs)
+            x = nn.ReLU()(x)
 
         x = global_mean_pool(x, batch)
 
