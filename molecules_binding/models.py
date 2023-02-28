@@ -14,9 +14,15 @@ class MLP(nn.Module):
 
     def __init__(self, input_size, hidden_size, output_size):
         super().__init__()
-        self.layers = nn.Sequential(nn.Linear(input_size, hidden_size),
-                                    nn.ReLU(),
-                                    nn.Linear(hidden_size, output_size))
+
+        layer_sizes = [input_size] + hidden_size
+        layers = []
+        for ins, outs in list(zip(layer_sizes, layer_sizes[1:])):
+            layers.append(nn.Linear(ins, outs))
+            layers.append(nn.ReLU())
+        layers.append(nn.Linear(layer_sizes[-1], output_size))
+
+        self.layers = nn.Sequential(*layers)
 
     def forward(self, x):
         x = self.layers(x)
@@ -39,13 +45,15 @@ class GraphNN(MessagePassing):
         layer_sizes = [num_node_features] + hidden_channels
 
         layers = []
+        pairs = list(zip(layer_sizes, layer_sizes[1:]))
 
-        for i in range(len(layer_sizes) - 2):
-            layers.append(GATConv(layer_sizes[i], layer_sizes[i + 1]))
+        for ins, outs in pairs[:-1]:
+            layers.append(GATConv(ins, outs))
             layers.append(nn.ReLU())
 
-        layers.append(GCNConv(layer_sizes[-2], layer_sizes[-1]))
-        layers.append(nn.ReLU())
+        for ins, outs in pairs[-1]:
+            layers.append(GCNConv(ins, outs))
+            layers.append(nn.ReLU())
 
         self.layers = nn.Sequential(*layers)
         self.lin = nn.Linear(layer_sizes[-1], 1)
