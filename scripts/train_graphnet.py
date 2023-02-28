@@ -2,7 +2,7 @@
 Train the GNN
 """
 from molecules_binding.models import GraphNN
-from molecules_binding.datasets import num_features
+from molecules_binding.parsers import num_features
 from torch_geometric.loader import DataLoader
 import torch
 import matplotlib.pyplot as plt
@@ -121,7 +121,6 @@ def store_list(somelist, path_list):
 def main(_):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     dataset = torch.load(FLAGS.path_dataset)
-
     train_size = int(FLAGS.train_perc * len(dataset))
     test_size = len(dataset) - train_size
 
