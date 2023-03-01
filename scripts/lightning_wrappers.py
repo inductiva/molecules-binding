@@ -20,6 +20,7 @@ flags.DEFINE_float("dropout_rate", 0.3, "Dropout rate")
 flags.DEFINE_multi_integer("num_hidden", [40, 30, 30, 40],
                            "size of the new features after conv layer")
 flags.DEFINE_float("train_perc", 0.8, "percentage of train-validation-split")
+flags.DEFINE_integer("batch_size", 32, "batch size")
 
 criterion = torch.nn.MSELoss()
 
@@ -29,12 +30,13 @@ class AffinityBindingTrainer(pl.LightningModule):
         Graph Convolution Neural Network
     """
 
-    def __init__(self, model, learning_rate, train_dataset):
+    def __init__(self, model, learning_rate, train_dataset, batch_size):
         super().__init__()
 
         self.model = model
         self.learning_rate = learning_rate
         self.train_dataset = train_dataset
+        self.batch_size = batch_size
 
     def training_step(self, data, _):
         labels = data.y.unsqueeze(1)
@@ -43,12 +45,11 @@ class AffinityBindingTrainer(pl.LightningModule):
         return {"loss": loss}
 
     def configure_optimizers(self):
-        return torch.optim.Adam(self.model.parameters(),
-                                lr=FLAGS.learning_rate)
+        return torch.optim.Adam(self.model.parameters(), lr=FLAGS.learning_rate)
 
     def train_dataloader(self):
         train_loader = DataLoader(self.train_dataset,
-                                  batch_size=32,
+                                  batch_size=self.batch_size,
                                   shuffle=True)
         return train_loader
 
@@ -58,13 +59,14 @@ def main(_):
     train_size = int(FLAGS.train_perc * len(dataset))
     test_size = len(dataset) - train_size
     train_dataset, _ = torch.utils.data.random_split(
-        dataset, [train_size, test_size])
+        dataset, [train_size, test_size],
+        generator=torch.Generator().manual_seed(42))
 
     trainer = Trainer(fast_dev_run=False)
     model = GraphNN(FLAGS.num_hidden, num_features)
     model.double()
     lightning_model = AffinityBindingTrainer(model, FLAGS.learning_rate,
-                                             train_dataset)
+                                             train_dataset, FLAGS.batch_size)
     trainer.fit(lightning_model)
 
 
