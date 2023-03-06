@@ -22,7 +22,7 @@ flags.DEFINE_float("train_perc", 0.8, "percentage of train-validation-split")
 flags.DEFINE_integer("batch_size", 8, "batch size")
 
 flags.DEFINE_list("num_hidden", [100, 50],
-                           "size of the new features after conv layer")
+                  "size of the new features after conv layer")
 
 flags.DEFINE_integer("num_epochs", 30, "number of epochs")
 
@@ -119,8 +119,7 @@ def store_list(somelist, path_list):
 
 def main(_):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    with open(FLAGS.path_dataset, "rb") as file:
-        dataset = pickle.load(file)
+    dataset = torch.load(FLAGS.path_dataset)
 
     train_size = int(FLAGS.train_perc * len(dataset))
     test_size = len(dataset) - train_size
@@ -140,7 +139,7 @@ def main(_):
                                               shuffle=False)
 
     layer_sizes = list(map(int, FLAGS.num_hidden))
-    model = MLP(len(dataset[0][0]), layer_sizes)
+    model = MLP(len(dataset[0][0]), layer_sizes, 1)
     model = model.to(device)
     model.double()
     optimizer = torch.optim.Adam(model.parameters(), lr=FLAGS.learning_rate)
