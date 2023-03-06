@@ -8,7 +8,6 @@ import torch
 import matplotlib.pyplot as plt
 from absl import flags
 from absl import app
-# import psutil
 import numpy as np
 from scipy.stats import spearmanr
 import pickle
@@ -23,8 +22,8 @@ flags.DEFINE_float("train_perc", 0.8, "percentage of train-validation-split")
 
 flags.DEFINE_integer("batch_size", 8, "batch size")
 
-flags.DEFINE_multi_integer("num_hidden", [40, 30, 30, 40],
-                           "size of the new features after conv layer")
+flags.DEFINE_list("num_hidden", [40, 30, 30, 40],
+                  "size of the new features after conv layer")
 
 flags.DEFINE_integer("num_epochs", 30, "number of epochs")
 
@@ -136,8 +135,9 @@ def main(_):
                              shuffle=False)
     stat_loader = DataLoader(test_dataset, batch_size=1, shuffle=False)
 
-    model = GraphNN(hidden_channels=FLAGS.num_hidden,
-                    num_node_features=num_features)
+    layer_sizes = list(map(int, FLAGS.num_hidden))
+
+    model = GraphNN(hidden_channels=layer_sizes, num_node_features=num_features)
     model = model.to(device)
     model.double()
     optimizer = torch.optim.Adam(model.parameters(), lr=FLAGS.learning_rate)

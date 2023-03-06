@@ -1,84 +1,181 @@
 """
 Train mlp
 """
+from molecules_binding.models import MLP
 import torch
-from torch import nn
-from molecules_binding.datasets import read_dataset
-from molecules_binding.datasets import get_affinities
-from molecules_binding.datasets import PDBDataset
-from models import MLP
 import matplotlib.pyplot as plt
-
-# from absl import app
 from absl import flags
-# from absl import logging
-import sys
-
-flags.DEFINE_string('aff_dir',
-                    '../../datasets/index/INDEX_general_PL_data.2020',
-                    'specify the path to the index of the dataset')
-
-flags.DEFINE_string('data_dir', '../../datasets/refined-set',
-                    'specify the path to the dataset')
-
-flags.DEFINE_float('train_size', 0.8, 'percentage of train-validation-split')
-
-flags.DEFINE_integer('batch_size', 30, 'batch size')
-
-flags.DEFINE_integer('hidden_size', 15, 'size of the hidden layer')
+from absl import app
+import numpy as np
+from scipy.stats import spearmanr
+import pickle
 
 FLAGS = flags.FLAGS
-FLAGS(sys.argv)
-# for PL binding
 
-aff_dict = get_affinities(FLAGS.aff_dir)
-pdb_files = read_dataset(FLAGS.data_dir)
-dataset = PDBDataset(pdb_files, aff_dict)
+flags.DEFINE_string("path_dataset", None,
+                    "specify the path to the stored processed dataset")
 
-train_size = int(FLAGS.train_size * len(dataset))
-test_size = len(dataset) - train_size
-train_dataset, test_dataset = torch.utils.data.random_split(
-    dataset, [train_size, test_size])
+flags.mark_flag_as_required("path_dataset")
 
-dataloader = torch.utils.data.DataLoader(train_dataset,
-                                         batch_size=flags.batch_size,
-                                         shuffle=True)
+flags.DEFINE_float("train_perc", 0.8, "percentage of train-validation-split")
 
-input_dim = len(dataset[0][0])
-hidden_dim = flags.hidden_size
-output_dim = 1
-model = MLP(input_dim, hidden_dim, output_dim)
-mse_loss = nn.MSELoss()
-optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
-num_epochs = 70
+flags.DEFINE_integer("batch_size", 8, "batch size")
 
-loss_values = []
-for epoch in range(num_epochs):
-    epoch_loss = 0
-    for inputs, targets in dataloader:
-        # Forward pass
-        outputs = model(inputs)
-        loss = mse_loss(outputs, torch.unsqueeze(targets, -1))
-        epoch_loss += loss.item()
+flags.DEFINE_list("num_hidden", [100, 50],
+                  "size of the new features after conv layer")
 
-        # Backward and optimize
-        optimizer.zero_grad()
+flags.DEFINE_integer("num_epochs", 30, "number of epochs")
+
+flags.DEFINE_float("learning_rate", 0.001, "learning rate")
+
+flags.DEFINE_string("path_error_train", None,
+                    "specify the path to store errors train")
+
+flags.mark_flag_as_required("path_error_train")
+
+flags.DEFINE_string("path_error_test", None,
+                    "specify the path to store errors test")
+
+flags.mark_flag_as_required("path_error_test")
+
+flags.DEFINE_string("path_preds", None, "specify the path to predictions")
+
+flags.mark_flag_as_required("path_preds")
+
+flags.DEFINE_string("path_reals", None, "specify the path to real values")
+
+flags.mark_flag_as_required("path_reals")
+
+flags.DEFINE_string("path_plots", None, "specify the path to store plots")
+
+flags.mark_flag_as_required("path_plots")
+
+flags.DEFINE_string("path_model", None, "specify the path to store model")
+
+flags.mark_flag_as_required("path_model")
+
+
+def plot_loss(errors_array, path_plot):
+    plt.plot([elem.detach().cpu().numpy() for elem in errors_array])
+    plt.xlabel("Epoch")
+    plt.ylabel("Loss")
+    plt.savefig(path_plot)
+    plt.show()
+
+
+def train(model, train_loader, criterion, optimizer, device):
+    model.train()
+    for inputs, targets in train_loader:
+        inputs = inputs.to(device)
+        targets = targets.to(device)
+        out = model(inputs.double())
+        loss = criterion(out, torch.unsqueeze(targets, -1).double())
         loss.backward()
         optimizer.step()
-    loss_values.append(epoch_loss / len(dataloader))
+        optimizer.zero_grad()
 
-print('training complete')
 
-plt.plot(loss_values)
-plt.xlabel('Epoch')
-plt.ylabel('Loss')
-plt.show()
-
-with torch.no_grad():
-    val_losses = []
+def test(loader, model, criterion, device):
     model.eval()
-    for inputs, targets in test_dataset:
-        y_pred = model(inputs)
-        val_loss = mse_loss(y_pred[0], torch.as_tensor(targets))
-        val_losses.append(val_loss)
-print(sum(val_losses) / len(val_losses))
+    mse = 0
+    for inputs, targets in loader:
+        inputs = inputs.to(device)
+        targets = targets.to(device)
+        out = model(inputs.double())
+        # print(out, data.y)
+        mse += criterion(out, torch.unsqueeze(targets, -1).double()).detach()
+    return mse / len(loader)
+
+
+def test_final(loader, model, device):
+    preds = []
+    reals = []
+    model.eval()
+    for inputs, targets in loader:
+        inputs = inputs.to(device)
+        targets = targets.to(device)
+        pred = model(inputs.double())
+        real = torch.unsqueeze(targets, -1)
+        preds += [pred.detach().cpu().numpy()[0][0]]
+        reals += [real.detach().cpu().numpy()[0][0]]
+    return np.array(preds), np.array(reals)
+
+
+def statistics(preds, reals):
+    error = np.abs(preds - reals)
+    mae = np.mean(error)
+    mse = np.mean(error**2)
+    rmse = np.sqrt(mse)
+    pearson_coef = np.corrcoef(preds, reals)
+    correlation, p_value = spearmanr(preds, reals)
+
+    return mae, mse, rmse, pearson_coef, correlation, p_value
+
+
+def store_list(somelist, path_list):
+    with open(path_list, "wb") as fp:
+        pickle.dump(somelist, fp)
+
+
+def main(_):
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    dataset = torch.load(FLAGS.path_dataset)
+
+    train_size = int(FLAGS.train_perc * len(dataset))
+    test_size = len(dataset) - train_size
+
+    train_dataset, test_dataset = torch.utils.data.random_split(
+        dataset, [train_size, test_size])
+
+    train_loader = torch.utils.data.DataLoader(train_dataset,
+                                               batch_size=FLAGS.batch_size,
+                                               shuffle=True)
+
+    test_loader = torch.utils.data.DataLoader(test_dataset,
+                                              batch_size=FLAGS.batch_size,
+                                              shuffle=False)
+    stat_loader = torch.utils.data.DataLoader(test_dataset,
+                                              batch_size=1,
+                                              shuffle=False)
+
+    layer_sizes = list(map(int, FLAGS.num_hidden))
+    model = MLP(len(dataset[0][0]), layer_sizes, 1)
+    model = model.to(device)
+    model.double()
+    optimizer = torch.optim.Adam(model.parameters(), lr=FLAGS.learning_rate)
+    criterion = torch.nn.MSELoss()
+
+    train_errors = []
+    test_errors = []
+    for epoch in range(1, FLAGS.num_epochs + 1):
+        train(model, train_loader, criterion, optimizer, device)
+        train_err = test(train_loader, model, criterion, device)
+        test_err = test(test_loader, model, criterion, device)
+        print(f"Epoch: {epoch:03d}, Train Error: {train_err:.4f}, \
+                Test Error: {test_err:.4f}")
+        train_errors += [train_err]
+        test_errors += [test_err]
+
+    store_list(train_errors, FLAGS.path_error_train)
+    store_list(test_errors, FLAGS.path_error_test)
+
+    preds, reals = test_final(stat_loader, model, device)
+
+    store_list(preds, FLAGS.path_preds)
+    store_list(reals, FLAGS.path_reals)
+
+    mae, mse, rmse, pearson_coef, spearman_corr, spearman_p_value = \
+        statistics(preds, reals)
+
+    print(f"MAE is {mae}, MSE is {mse}, RMSE is {rmse}",
+          f"Pearson coefficient is {pearson_coef}",
+          f"Spearman correlation is {spearman_corr}",
+          f"Spearman p-value is {spearman_p_value}")
+
+    torch.save(model.cpu().state_dict(), FLAGS.path_model)
+    plot_loss(train_errors, FLAGS.path_plots)
+    plot_loss(test_errors, FLAGS.path_plots)
+
+
+if __name__ == "__main__":
+    app.run(main)
