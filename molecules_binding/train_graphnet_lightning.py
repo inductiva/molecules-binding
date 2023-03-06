@@ -26,23 +26,16 @@ flags.DEFINE_integer("num_epochs", 100, "number of epochs")
 criterion = torch.nn.MSELoss()
 
 
-class AffinityBindingTrainer(pl.LightningModule):
+class AffinityBinding(pl.LightningModule):
     """
         Graph Convolution Neural Network
     """
 
-    def __init__(self, model, learning_rate, dataset, batch_size, train_perc):
+    def __init__(self, model, learning_rate, batch_size):
         super().__init__()
 
         self.model = model
         self.learning_rate = learning_rate
-
-        train_size = int(train_perc * len(dataset))
-        test_size = len(dataset) - train_size
-        self.train_dataset, self.val_dataset = torch.utils.data.random_split(
-            dataset, [train_size, test_size],
-            generator=torch.Generator().manual_seed(42))
-
         self.batch_size = batch_size
 
     def training_step(self, data, _):
@@ -54,25 +47,11 @@ class AffinityBindingTrainer(pl.LightningModule):
     def configure_optimizers(self):
         return torch.optim.Adam(self.model.parameters(), lr=FLAGS.learning_rate)
 
-    def train_dataloader(self):
-        train_loader = DataLoader(self.train_dataset,
-                                  batch_size=self.batch_size,
-                                  num_workers=12,
-                                  shuffle=True)
-        return train_loader
-
     def validation_step(self, data, _):
         labels = data.y.unsqueeze(1)
         outputs = self.model(data, data.batch, FLAGS.dropout_rate)
         loss = criterion(labels, outputs)
         return {"val_loss": loss}
-
-    def val_dataloader(self):
-        val_loader = DataLoader(self.val_dataset,
-                                batch_size=self.batch_size,
-                                num_workers=12,
-                                shuffle=False)
-        return val_loader
 
     def validation_epoch_end(self, outputs):
         avg_loss = torch.stack([x["val_loss"] for x in outputs]).mean()
@@ -82,16 +61,33 @@ class AffinityBindingTrainer(pl.LightningModule):
 def main(_):
     dataset = torch.load(FLAGS.path_dataset)
 
+    train_size = int(FLAGS.train_perc * len(dataset))
+    test_size = len(dataset) - train_size
+    train_dataset, val_dataset = torch.utils.data.random_split(
+        dataset, [train_size, test_size],
+        generator=torch.Generator().manual_seed(42))
+
+    train_loader = DataLoader(train_dataset,
+                              batch_size=FLAGS.batch_size,
+                              num_workers=12,
+                              shuffle=True)
+    val_loader = DataLoader(val_dataset,
+                            batch_size=FLAGS.batch_size,
+                            num_workers=12,
+                            shuffle=False)
+
+    model = GraphNN(FLAGS.num_hidden, num_features)
+    model.double()
+
+    lightning_model = AffinityBinding(model, FLAGS.learning_rate,
+                                      FLAGS.batch_size)
     trainer = Trainer(fast_dev_run=False,
                       max_epochs=FLAGS.num_epochs,
                       accelerator="gpu",
                       devices=1)
-    model = GraphNN(FLAGS.num_hidden, num_features)
-    model.double()
-    lightning_model = AffinityBindingTrainer(model, FLAGS.learning_rate,
-                                             dataset, FLAGS.batch_size,
-                                             FLAGS.train_perc)
-    trainer.fit(lightning_model)
+    trainer.fit(model=lightning_model,
+                train_dataloaders=train_loader,
+                val_dataloaders=val_loader)
 
 
 if __name__ == "__main__":
