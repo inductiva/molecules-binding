@@ -22,6 +22,7 @@ flags.DEFINE_multi_integer("num_hidden", [40, 30, 30, 40],
 flags.DEFINE_float("train_perc", 0.8, "percentage of train-validation-split")
 flags.DEFINE_integer("batch_size", 32, "batch size")
 flags.DEFINE_integer("num_epochs", 100, "number of epochs")
+flags.DEFINE_integer("num_workers", 12, "number of workeres")
 
 
 def main(_):
@@ -35,10 +36,10 @@ def main(_):
 
     train_loader = DataLoader(train_dataset,
                               batch_size=FLAGS.batch_size,
-                              num_workers=12,
+                              num_workers=FLAGS.num_workers,
                               shuffle=True)
     val_loader = DataLoader(val_dataset,
-                            batch_size=FLAGS.batch_size,
+                            batch_size=FLAGS.num_workers,
                             num_workers=12,
                             shuffle=False)
 
