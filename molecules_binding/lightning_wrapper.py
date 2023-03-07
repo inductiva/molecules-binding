@@ -44,11 +44,10 @@ class MLPLightning(pl.LightningModule):
         Multilayer Perceptron
     """
 
-    def __init__(self, model, learning_rate, batch_size):
+    def __init__(self, model, learning_rate):
         super().__init__()
         self.model = model
         self.learning_rate = learning_rate
-        self.batch_size = batch_size
         self.criterion = torch.nn.MSELoss()
 
     def training_step(self, data, _):

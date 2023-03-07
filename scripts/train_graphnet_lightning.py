@@ -22,7 +22,8 @@ flags.DEFINE_multi_integer("num_hidden", [40, 30, 30, 40],
 flags.DEFINE_float("train_perc", 0.8, "percentage of train-validation-split")
 flags.DEFINE_integer("batch_size", 32, "batch size")
 flags.DEFINE_integer("num_epochs", 100, "number of epochs")
-flags.DEFINE_integer("num_workers", 12, "number of workeres")
+flags.DEFINE_integer("num_workers", 12, "number of workers")
+flags.DEFINE_bool("use_gpu", True, "True if using gpu, False if not")
 
 
 def main(_):
@@ -50,7 +51,7 @@ def main(_):
                                        FLAGS.batch_size, FLAGS.dropout_rate)
     trainer = Trainer(fast_dev_run=False,
                       max_epochs=FLAGS.num_epochs,
-                      accelerator="gpu",
+                      accelerator="gpu" if FLAGS.use_gpu else None,
                       devices=1)
     trainer.fit(model=lightning_model,
                 train_dataloaders=train_loader,
