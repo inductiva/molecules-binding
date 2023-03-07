@@ -4,7 +4,7 @@ Lightning Code
 import torch
 from molecules_binding.models import GraphNN
 from molecules_binding.parsers import num_features
-from molecules_binding.lightning_wrapper import AffinityBinding
+from molecules_binding.lightning_wrapper import GraphNNLightning
 from torch_geometric.loader import DataLoader
 from pytorch_lightning import Trainer
 from absl import flags
@@ -46,8 +46,8 @@ def main(_):
     model = GraphNN(FLAGS.num_hidden, num_features)
     model.double()
 
-    lightning_model = AffinityBinding(model, FLAGS.learning_rate,
-                                      FLAGS.batch_size, FLAGS.dropout_rate)
+    lightning_model = GraphNNLightning(model, FLAGS.learning_rate,
+                                       FLAGS.batch_size, FLAGS.dropout_rate)
     trainer = Trainer(fast_dev_run=False,
                       max_epochs=FLAGS.num_epochs,
                       accelerator="gpu",

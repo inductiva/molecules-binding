@@ -3,7 +3,7 @@ Lightning Code
 """
 import torch
 from molecules_binding.models import MLP
-import pytorch_lightning as pl
+from molecules_binding.lightning_wrapper import MLPLightning
 from pytorch_lightning import Trainer
 from absl import flags
 from absl import app
@@ -20,43 +20,7 @@ flags.DEFINE_multi_integer("num_hidden", [128, 128],
 flags.DEFINE_float("train_perc", 0.8, "percentage of train-validation-split")
 flags.DEFINE_integer("batch_size", 32, "batch size")
 flags.DEFINE_integer("num_epochs", 100, "number of epochs")
-
-criterion = torch.nn.MSELoss()
-
-
-class AffinityBinding(pl.LightningModule):
-    """
-        Multilayer Perceptron
-    """
-
-    def __init__(self, model, learning_rate, batch_size):
-        super().__init__()
-        self.model = model
-        self.learning_rate = learning_rate
-        self.batch_size = batch_size
-
-    def training_step(self, data, _):
-        inputs, labels = data
-        inputs = inputs.double()
-        labels = torch.unsqueeze(labels, -1).double()
-        outputs = self.model(inputs)
-        loss = criterion(outputs, labels)
-        return {"loss": loss}
-
-    def configure_optimizers(self):
-        return torch.optim.Adam(self.model.parameters(), lr=FLAGS.learning_rate)
-
-    def validation_step(self, data, _):
-        inputs, labels = data
-        inputs = inputs.double()
-        labels = torch.unsqueeze(labels, -1).double()
-        outputs = self.model(inputs)
-        loss = criterion(outputs, labels)
-        return {"val_loss": loss}
-
-    def validation_epoch_end(self, outputs):
-        avg_loss = torch.stack([x["val_loss"] for x in outputs]).mean()
-        return {"val_loss": avg_loss}
+flags.DEFINE_integer("num_workers", 12, "number of workeres")
 
 
 def main(_):
@@ -70,19 +34,18 @@ def main(_):
 
     train_loader = torch.utils.data.DataLoader(train_dataset,
                                                batch_size=FLAGS.batch_size,
-                                               num_workers=12,
+                                               num_workers=FLAGS.num_workers,
                                                shuffle=True)
     val_loader = torch.utils.data.DataLoader(val_dataset,
                                              batch_size=FLAGS.batch_size,
-                                             num_workers=12,
+                                             num_workers=FLAGS.num_workers,
                                              shuffle=False)
 
     layer_sizes = list(map(int, FLAGS.num_hidden))
     model = MLP(len(dataset[0][0]), layer_sizes, 1)
     model.double()
 
-    lightning_model = AffinityBinding(model, FLAGS.learning_rate,
-                                      FLAGS.batch_size)
+    lightning_model = MLPLightning(model, FLAGS.learning_rate, FLAGS.batch_size)
     trainer = Trainer(fast_dev_run=False,
                       max_epochs=FLAGS.num_epochs,
                       accelerator="gpu",
