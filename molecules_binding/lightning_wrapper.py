@@ -19,19 +19,20 @@ class GraphNNLightning(pl.LightningModule):
         self.dropout_rate = dropout_rate
         self.criterion = torch.nn.MSELoss()
 
-    def training_step(self, data, _):
+    def compute_loss(self, data):
         labels = data.y.unsqueeze(1)
         outputs = self.model(data, data.batch, self.dropout_rate)
-        loss = self.criterion(labels, outputs)
+        return self.criterion(labels, outputs)
+
+    def training_step(self, data, _):
+        loss = self.compute_loss(data)
         return {"loss": loss}
 
     def configure_optimizers(self):
         return torch.optim.Adam(self.model.parameters(), lr=self.learning_rate)
 
     def validation_step(self, data, _):
-        labels = data.y.unsqueeze(1)
-        outputs = self.model(data, data.batch, self.dropout_rate)
-        loss = self.criterion(labels, outputs)
+        loss = self.compute_loss(data)
         return {"val_loss": loss}
 
     def validation_epoch_end(self, outputs):
@@ -50,23 +51,22 @@ class MLPLightning(pl.LightningModule):
         self.learning_rate = learning_rate
         self.criterion = torch.nn.MSELoss()
 
-    def training_step(self, data, _):
+    def compute_loss(self, data):
         inputs, labels = data
         inputs = inputs.double()
         labels = torch.unsqueeze(labels, -1).double()
         outputs = self.model(inputs)
-        loss = self.criterion(outputs, labels)
+        return self.criterion(outputs, labels)
+
+    def training_step(self, data, _):
+        loss = self.compute_loss(data)
         return {"loss": loss}
 
     def configure_optimizers(self):
         return torch.optim.Adam(self.model.parameters(), lr=self.learning_rate)
 
     def validation_step(self, data, _):
-        inputs, labels = data
-        inputs = inputs.double()
-        labels = torch.unsqueeze(labels, -1).double()
-        outputs = self.model(inputs)
-        loss = self.criterion(outputs, labels)
+        loss = self.compute_loss(data)
         return {"val_loss": loss}
 
     def validation_epoch_end(self, outputs):
