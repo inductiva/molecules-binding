@@ -2,10 +2,8 @@
 Lightning Code
 """
 import torch
-from molecules_binding.models import GraphNN
-from molecules_binding.parsers import num_features
-from molecules_binding.lightning_wrapper import GraphNNLightning
-from torch_geometric.loader import DataLoader
+from molecules_binding.models import MLP
+from molecules_binding.lightning_wrapper import MLPLightning
 from pytorch_lightning import Trainer
 from absl import flags
 from absl import app
@@ -17,7 +15,7 @@ flags.DEFINE_string("path_dataset", None,
 flags.mark_flag_as_required("path_dataset")
 flags.DEFINE_float("learning_rate", 0.001, "learning rate")
 flags.DEFINE_float("dropout_rate", 0.3, "Dropout rate")
-flags.DEFINE_multi_integer("num_hidden", [40, 30, 30, 40],
+flags.DEFINE_multi_integer("num_hidden", [128, 128],
                            "size of the new features after conv layer")
 flags.DEFINE_float("train_perc", 0.8, "percentage of train-validation-split")
 flags.DEFINE_integer("batch_size", 32, "batch size")
@@ -35,20 +33,20 @@ def main(_):
         dataset, [train_size, test_size],
         generator=torch.Generator().manual_seed(42))
 
-    train_loader = DataLoader(train_dataset,
-                              batch_size=FLAGS.batch_size,
-                              num_workers=FLAGS.num_workers,
-                              shuffle=True)
-    val_loader = DataLoader(val_dataset,
-                            batch_size=FLAGS.num_workers,
-                            num_workers=12,
-                            shuffle=False)
+    train_loader = torch.utils.data.DataLoader(train_dataset,
+                                               batch_size=FLAGS.batch_size,
+                                               num_workers=FLAGS.num_workers,
+                                               shuffle=True)
+    val_loader = torch.utils.data.DataLoader(val_dataset,
+                                             batch_size=FLAGS.batch_size,
+                                             num_workers=FLAGS.num_workers,
+                                             shuffle=False)
 
-    model = GraphNN(FLAGS.num_hidden, num_features)
+    layer_sizes = list(map(int, FLAGS.num_hidden))
+    model = MLP(len(dataset[0][0]), layer_sizes, 1)
     model.double()
 
-    lightning_model = GraphNNLightning(model, FLAGS.learning_rate,
-                                       FLAGS.batch_size, FLAGS.dropout_rate)
+    lightning_model = MLPLightning(model, FLAGS.learning_rate)
     trainer = Trainer(fast_dev_run=False,
                       max_epochs=FLAGS.num_epochs,
                       accelerator="gpu" if FLAGS.use_gpu else None,
