@@ -9,6 +9,7 @@ from torch_geometric.loader import DataLoader
 from pytorch_lightning import Trainer
 from absl import flags
 from absl import app
+import mlflow
 
 FLAGS = flags.FLAGS
 
@@ -25,6 +26,9 @@ flags.DEFINE_integer("num_epochs", 100, "number of epochs")
 flags.DEFINE_integer("num_workers", 12, "number of workers")
 flags.DEFINE_bool("use_gpu", True, "True if using gpu, False if not")
 
+def _log_parameters(**kwargs):
+    for key, value in kwargs.items():
+        mlflow.log_param(str(key), value)
 
 def main(_):
     dataset = torch.load(FLAGS.path_dataset)
@@ -48,6 +52,15 @@ def main(_):
 
     lightning_model = GraphNNLightning(model, FLAGS.learning_rate,
                                        FLAGS.batch_size, FLAGS.dropout_rate)
+    
+    with mlflow.start_run():
+        _log_parameters(
+            batch_size = FLAGS.batch_size,
+            learning_rate = FLAGS.learning_rate,
+            dropout_rate = FLAGS.dropout_rate,
+            num_hidden = FLAGS.num_hidden
+            )
+    
     trainer = Trainer(fast_dev_run=False,
                       max_epochs=FLAGS.num_epochs,
                       accelerator="gpu" if FLAGS.use_gpu else None,
