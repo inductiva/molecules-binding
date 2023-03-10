@@ -3,7 +3,7 @@ Lightning Code
 """
 import torch
 from molecules_binding.models import GraphNN
-from molecules_binding.parsers import num_features
+# from molecules_binding.parsers import num_features
 from molecules_binding.lightning_wrapper import GraphNNLightning
 from torch_geometric.loader import DataLoader
 from pytorch_lightning import Trainer
@@ -28,7 +28,6 @@ flags.DEFINE_bool("use_gpu", True, "True if using gpu, False if not")
 
 def main(_):
     dataset = torch.load(FLAGS.path_dataset)
-
     train_size = int(FLAGS.train_perc * len(dataset))
     test_size = len(dataset) - train_size
     train_dataset, val_dataset = torch.utils.data.random_split(
@@ -40,11 +39,11 @@ def main(_):
                               num_workers=FLAGS.num_workers,
                               shuffle=True)
     val_loader = DataLoader(val_dataset,
-                            batch_size=FLAGS.num_workers,
-                            num_workers=12,
+                            batch_size=FLAGS.batch_size,
+                            num_workers=FLAGS.num_workers,
                             shuffle=False)
 
-    model = GraphNN(FLAGS.num_hidden, num_features)
+    model = GraphNN(FLAGS.num_hidden, dataset[0].num_node_features)
     model.double()
 
     lightning_model = GraphNNLightning(model, FLAGS.learning_rate,
