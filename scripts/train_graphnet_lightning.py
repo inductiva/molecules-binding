@@ -10,10 +10,6 @@ from pytorch_lightning import Trainer
 from absl import flags
 from absl import app
 
-import logging
-
-logging.disable()
-
 FLAGS = flags.FLAGS
 
 flags.DEFINE_string("path_dataset", None,

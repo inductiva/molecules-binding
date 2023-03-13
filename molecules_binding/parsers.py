@@ -9,14 +9,13 @@ import os
 from loguru import logger
 import warnings
 import logging
-from graphein.protein.config import ProteinGraphConfig
-from graphein.protein.graphs import construct_graph
-from graphein.protein.edges.atomic import add_atomic_edges
-
 logger.disable("graphein")
 warnings.filterwarnings("ignore")
 logging.disable()
-
+# pylint: disable=C0413
+from graphein.protein.config import ProteinGraphConfig
+from graphein.protein.graphs import construct_graph
+from graphein.protein.edges.atomic import add_atomic_edges
 
 def get_affinities(dir_affinity):
     aff_dict = {}
