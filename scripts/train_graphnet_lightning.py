@@ -40,8 +40,8 @@ def main(_):
                               num_workers=FLAGS.num_workers,
                               shuffle=True)
     val_loader = DataLoader(val_dataset,
-                            batch_size=FLAGS.num_workers,
-                            num_workers=12,
+                            batch_size=FLAGS.batch_size,
+                            num_workers=FLAGS.num_workers,
                             shuffle=False)
 
     model = GraphNN(FLAGS.num_hidden, num_features)
