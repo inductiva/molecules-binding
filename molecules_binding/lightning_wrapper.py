@@ -26,14 +26,21 @@ class GraphNNLightning(pl.LightningModule):
 
     def training_step(self, data, _):
         loss = self.compute_loss(data)
+        self.log("loss", loss, batch_size=self.batch_size)
         return {"loss": loss}
 
     def configure_optimizers(self):
         return torch.optim.Adam(self.model.parameters(), lr=self.learning_rate)
 
     def validation_step(self, data, _):
-        loss = self.compute_loss(data)
-        return {"val_loss": loss}
+        val_loss = self.compute_loss(data)
+        self.log("val_loss",
+                 val_loss,
+                 on_step=False,
+                 on_epoch=True,
+                 prog_bar=True,
+                 batch_size=self.batch_size)
+        return {"val_loss": val_loss}
 
     def validation_epoch_end(self, outputs):
         avg_loss = torch.stack([x["val_loss"] for x in outputs]).mean()
@@ -66,8 +73,8 @@ class MLPLightning(pl.LightningModule):
         return torch.optim.Adam(self.model.parameters(), lr=self.learning_rate)
 
     def validation_step(self, data, _):
-        loss = self.compute_loss(data)
-        return {"val_loss": loss}
+        val_loss = self.compute_loss(data)
+        return {"val_loss": val_loss}
 
     def validation_epoch_end(self, outputs):
         avg_loss = torch.stack([x["val_loss"] for x in outputs]).mean()

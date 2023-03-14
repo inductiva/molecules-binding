@@ -4,7 +4,6 @@ Lightning Code
 import torch
 from molecules_binding.models import GraphNN
 from molecules_binding.callbacks import LossMonitor
-# from molecules_binding.parsers import num_features
 from molecules_binding.lightning_wrapper import GraphNNLightning
 from torch_geometric.loader import DataLoader
 from pytorch_lightning import Trainer
@@ -63,8 +62,7 @@ def main(_):
                         dropout_rate=FLAGS.dropout_rate,
                         num_hidden=FLAGS.num_hidden)
         run_id = mlflow.active_run().info.run_id
-
-        loss_callback = LossMonitor(run_id, 50)
+        loss_callback = LossMonitor(50, run_id)
         callbacks = [loss_callback]
 
     trainer = Trainer(fast_dev_run=False,
