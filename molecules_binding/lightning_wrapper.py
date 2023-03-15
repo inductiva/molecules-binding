@@ -67,6 +67,7 @@ class MLPLightning(pl.LightningModule):
 
     def training_step(self, data, _):
         loss = self.compute_loss(data)
+        self.log("loss", loss)
         return {"loss": loss}
 
     def configure_optimizers(self):
@@ -74,6 +75,11 @@ class MLPLightning(pl.LightningModule):
 
     def validation_step(self, data, _):
         val_loss = self.compute_loss(data)
+        self.log("val_loss",
+                 val_loss,
+                 on_step=False,
+                 on_epoch=True,
+                 prog_bar=True)
         return {"val_loss": val_loss}
 
     def validation_epoch_end(self, outputs):

@@ -3,10 +3,12 @@ Lightning Code
 """
 import torch
 from molecules_binding.models import MLP
+from molecules_binding.callbacks import LossMonitor
 from molecules_binding.lightning_wrapper import MLPLightning
 from pytorch_lightning import Trainer
 from absl import flags
 from absl import app
+import mlflow
 
 FLAGS = flags.FLAGS
 
@@ -22,6 +24,11 @@ flags.DEFINE_integer("batch_size", 32, "batch size")
 flags.DEFINE_integer("num_epochs", 100, "number of epochs")
 flags.DEFINE_integer("num_workers", 12, "number of workers")
 flags.DEFINE_bool("use_gpu", True, "True if using gpu, False if not")
+
+
+def _log_parameters(**kwargs):
+    for key, value in kwargs.items():
+        mlflow.log_param(str(key), value)
 
 
 def main(_):
@@ -47,10 +54,19 @@ def main(_):
     model.double()
 
     lightning_model = MLPLightning(model, FLAGS.learning_rate)
-    trainer = Trainer(fast_dev_run=False,
-                      max_epochs=FLAGS.num_epochs,
+
+    with mlflow.start_run():
+        _log_parameters(batch_size=FLAGS.batch_size,
+                        learning_rate=FLAGS.learning_rate,
+                        num_hidden=FLAGS.num_hidden)
+        run_id = mlflow.active_run().info.run_id
+        loss_callback = LossMonitor(run_id)
+        callbacks = [loss_callback]
+
+    trainer = Trainer(max_epochs=FLAGS.num_epochs,
                       accelerator="gpu" if FLAGS.use_gpu else None,
-                      devices=1)
+                      devices=1,
+                      callbacks=callbacks)
     trainer.fit(model=lightning_model,
                 train_dataloaders=train_loader,
                 val_dataloaders=val_loader)
