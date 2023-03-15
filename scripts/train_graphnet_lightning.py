@@ -65,8 +65,7 @@ def main(_):
         loss_callback = LossMonitor(run_id)
         callbacks = [loss_callback]
 
-    trainer = Trainer(fast_dev_run=False,
-                      max_epochs=FLAGS.num_epochs,
+    trainer = Trainer(max_epochs=FLAGS.num_epochs,
                       accelerator="gpu" if FLAGS.use_gpu else None,
                       devices=1,
                       callbacks=callbacks)
