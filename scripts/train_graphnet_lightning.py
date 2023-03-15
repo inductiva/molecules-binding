@@ -62,7 +62,7 @@ def main(_):
                         dropout_rate=FLAGS.dropout_rate,
                         num_hidden=FLAGS.num_hidden)
         run_id = mlflow.active_run().info.run_id
-        loss_callback = LossMonitor(50, run_id)
+        loss_callback = LossMonitor(run_id)
         callbacks = [loss_callback]
 
     trainer = Trainer(fast_dev_run=False,
