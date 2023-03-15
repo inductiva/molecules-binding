@@ -6,11 +6,10 @@ import mlflow
 class LossMonitor(Callback):
     """Logs loss and model checkpoints to mlflow."""
 
-    def __init__(self, save_dir, run_id, log_frequency=1):
+    def __init__(self, save_dir, run_id):
         self.save_dir = save_dir
         self.run_id = run_id
         self.batch_loss = []
-        self.log_frequency = log_frequency
 
     def on_train_epoch_end(self, trainer, _):
         # Getting the metrics.
