@@ -10,6 +10,8 @@ from pytorch_lightning import Trainer
 from absl import flags
 from absl import app
 import mlflow
+from ray_lightning import RayStrategy
+import ray
 
 FLAGS = flags.FLAGS
 
@@ -22,9 +24,13 @@ flags.DEFINE_list("num_hidden", [40, 30, 30, 40],
                   "size of the new features after conv layer")
 flags.DEFINE_float("train_perc", 0.8, "percentage of train-validation-split")
 flags.DEFINE_integer("batch_size", 32, "batch size")
-flags.DEFINE_integer("num_epochs", 100, "number of epochs")
+flags.DEFINE_integer("max_epochs", 100, "number of epochs")
 flags.DEFINE_integer("num_workers", 12, "number of workers")
-flags.DEFINE_bool("use_gpu", True, "True if using gpu, False if not")
+flags.DEFINE_boolean("use_gpu", True, "True if using gpu, False if not")
+# Flags for Ray Training
+flags.DEFINE_boolean("use_ray", False, "Controls if it uses ray")
+flags.DEFINE_integer("num_cpus_per_worker", 1,
+                     "The number of cpus for each worker.")
 
 
 def _log_parameters(**kwargs):
@@ -65,10 +71,24 @@ def main(_):
         loss_callback = LossMonitor(run_id)
         callbacks = [loss_callback]
 
-    trainer = Trainer(max_epochs=FLAGS.num_epochs,
-                      accelerator="gpu" if FLAGS.use_gpu else None,
-                      devices=1,
-                      callbacks=callbacks)
+    if FLAGS.use_ray:
+        ray.init()
+
+        plugin = RayStrategy(num_workers=FLAGS.num_workers,
+                             num_cpus_per_worker=FLAGS.num_cpus_per_worker,
+                             use_gpu=FLAGS.use_gpu)
+        trainer = Trainer(max_epochs=FLAGS.max_epochs,
+                          strategy=plugin,
+                          logger=False,
+                          devices=1,
+                          callbacks=callbacks)
+    else:
+        accelerator = "gpu" if FLAGS.use_gpu else None
+        trainer = Trainer(max_epochs=FLAGS.max_epochs,
+                          accelerator=accelerator,
+                          devices=1,
+                          callbacks=callbacks)
+
     trainer.fit(model=lightning_model,
                 train_dataloaders=train_loader,
                 val_dataloaders=val_loader)
