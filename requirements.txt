@@ -1,10 +1,14 @@
-torch==1.13.1
+torch==1.13.1+cu117
 torch_geometric
-torch_sparse
-torch_scatter
+torch_scatter==2.1.0+pt113cu117
+torch_sparse==0.6.16+pt113cu117
+
 rdkit
 loguru
 pytorch_lightning
 mlflow
 absl-py
 ray_lightning
+
+--find-links https://download.pytorch.org/whl/torch_stable.html
+--find-links https://data.pyg.org/whl/torch-1.13.1+cu117.html
