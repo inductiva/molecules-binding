@@ -86,7 +86,6 @@ def main(_):
         accelerator = "gpu" if FLAGS.use_gpu else None
         trainer = Trainer(max_epochs=FLAGS.max_epochs,
                           accelerator=accelerator,
-                          devices=1,
                           callbacks=callbacks)
 
     trainer.fit(model=lightning_model,

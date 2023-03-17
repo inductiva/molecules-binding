@@ -1,1 +1,10 @@
+torch==1.13.1
+torch_geometric
+torch_sparse
+torch_scatter
+rdkit
+loguru
+pytorch_lightning
+mlflow
 absl-py
+ray_lightning
