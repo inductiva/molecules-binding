@@ -24,7 +24,7 @@ flags.mark_flag_as_required("path_dataset")
 flags.DEFINE_float("threshold", 6,
                    "maximum length of edges between protein and ligand")
 
-flags.DEFINE_enum("which_dataset", "refined_set", ["refined_set", "core_set"],
+flags.DEFINE_enum("which_dataset", None, ["refined_set", "core_set"],
                   "either refined_set or core_set")
 flags.mark_flag_as_required("which_dataset")
 
@@ -38,7 +38,7 @@ def create_dataset(direct: str, aff_dir: str, path: str, threshold: float,
     aff_d = get_affinities(aff_dir)
 
     if which_model == "graphnet":
-        datasetg = GraphDataset(pdb_files[:5], aff_d, threshold)
+        datasetg = GraphDataset(pdb_files[:3], aff_d, threshold)
         torch.save(datasetg, path)
     elif which_model == "mlp":
         datasetv = VectorDataset(pdb_files, aff_d)
