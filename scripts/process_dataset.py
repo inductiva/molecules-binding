@@ -42,11 +42,10 @@ def create_dataset(direct: str, affinity_directory: str, path: str,
     affinity_dict = get_affinities(affinity_directory)
 
     if which_model == "graphnet":
-        datasetg = GraphDataset(pdb_files, affinity_dict, threshold,
-                                which_file_ligand)
+        datasetg = GraphDataset(pdb_files, affinity_dict, threshold)
         torch.save(datasetg, path)
     elif which_model == "mlp":
-        datasetv = VectorDataset(pdb_files, affinity_dict, which_file_ligand)
+        datasetv = VectorDataset(pdb_files, affinity_dict)
         torch.save(datasetv, path)
 
 
