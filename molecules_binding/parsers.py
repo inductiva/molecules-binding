@@ -83,9 +83,10 @@ def vector2onehot(vector, n_features):
     return onehotvector
 
 
-def molecule_info(path, type_mol, num_atoms_additional, which_file_ligand):
+def molecule_info(path, type_mol, num_atoms_additional):
     """from path returns the coordinates, atoms and
     bonds of molecule"""
+
     if type_mol == "Protein":
         molecule = Chem.MolFromPDBFile(path,
                                        flavor=2,
@@ -93,10 +94,10 @@ def molecule_info(path, type_mol, num_atoms_additional, which_file_ligand):
                                        removeHs=False)
 
     elif type_mol == "Ligand":
-        if which_file_ligand == "sdf":
+        if path[-4:] == ".sdf":
             molecule = Chem.SDMolSupplier(path, sanitize=False,
                                           removeHs=False)[0]
-        elif which_file_ligand == "mol2":
+        elif path[-4:] == "mol2":
             molecule = Chem.MolFromMol2File(path,
                                             sanitize=False,
                                             removeHs=False)

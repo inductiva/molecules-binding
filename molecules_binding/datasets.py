@@ -35,7 +35,7 @@ def create_edges_protein_ligand(num_atoms_ligand, num_atoms_protein,
 class GraphDataset(Dataset):
     """ builds the graph for each complex"""
 
-    def __init__(self, pdb_files, aff_d, threshold, which_file_ligand):
+    def __init__(self, pdb_files, aff_d, threshold):
         """
         Args:
             pdb_files: list with triplets containing
@@ -53,13 +53,11 @@ class GraphDataset(Dataset):
         for comp_name, path_protein, path_ligand in pdb_files:
 
             (ligand_coord, atoms_ligand, edges_ligand, edges_length_ligand,
-             num_atoms_ligand) = molecule_info(path_ligand, "Ligand", 0,
-                                               which_file_ligand)
+             num_atoms_ligand) = molecule_info(path_ligand, "Ligand", 0)
 
             (protein_coord, atoms_protein, edges_protein, edges_length_protein,
              num_atoms_protein) = molecule_info(path_protein, "Protein",
-                                                num_atoms_ligand,
-                                                which_file_ligand)
+                                                num_atoms_ligand)
 
             edges_both, edges_dis_both = create_edges_protein_ligand(
                 num_atoms_ligand, num_atoms_protein, ligand_coord,
@@ -103,7 +101,7 @@ class VectorDataset(torch.utils.data.Dataset):
     """ constructs a vector with coordinates padded and flatten
     (both the ligand and protein) and one-hot chemical element"""
 
-    def __init__(self, pdb_files, aff_dict, which_file_ligand):
+    def __init__(self, pdb_files, aff_dict):
         """
         Args:
             pdb_files: list with triplets containing
@@ -123,13 +121,11 @@ class VectorDataset(torch.utils.data.Dataset):
         for comp_name, path_protein, path_ligand in pdb_files:
 
             (ligand_coord, atoms_ligand, _, _,
-             num_atoms_ligand) = molecule_info(path_ligand, "Ligand", 0,
-                                               which_file_ligand)
+             num_atoms_ligand) = molecule_info(path_ligand, "Ligand", 0)
 
             (protein_coord, atoms_protein, _, _,
              num_atoms_protein) = molecule_info(path_protein, "Protein",
-                                                num_atoms_ligand,
-                                                which_file_ligand)
+                                                num_atoms_ligand)
 
             max_len_l = max(max_len_l, num_atoms_ligand)
             max_len_p = max(max_len_p, num_atoms_protein)
