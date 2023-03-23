@@ -27,20 +27,25 @@ def get_affinities(dir_affinity):
     return aff_dict
 
 
-def read_dataset(directory, which_dataset):
+def read_dataset(directory, which_dataset, which_file_ligand):
     # creates a list of pdb_id, path to protein, path to ligand
     pdb_files = []
     if which_dataset == "refined_set":
-        index = 2
+        index_pdb = 2
     elif which_dataset == "core_set":
-        index = 3
+        index_pdb = 3
+
+    if which_file_ligand == "sdf":
+        index_ligand = 1
+    elif which_file_ligand == "mol2":
+        index_ligand = 0
 
     for filename in os.listdir(directory):
         f = os.path.join(directory, filename)
         files = os.listdir(f)
         pdb_id = filename
-        pdb_files += [(pdb_id, os.path.join(f, files[index]),
-                       os.path.join(f, files[1]))]
+        pdb_files += [(pdb_id, os.path.join(f, files[index_pdb]),
+                       os.path.join(f, files[index_ligand]))]
 
     return pdb_files
 
@@ -83,7 +88,7 @@ def vector2onehot(vector, n_features):
     return onehotvector
 
 
-def molecule_info(path, type_mol, num_atoms_additional):
+def molecule_info(path, type_mol, num_atoms_additional, which_file_ligand):
     """from path returns the coordinates, atoms and
     bonds of molecule"""
     if type_mol == "Protein":
@@ -92,11 +97,14 @@ def molecule_info(path, type_mol, num_atoms_additional):
                                        sanitize=False,
                                        removeHs=False)
 
-    if type_mol == "Ligand":
-        # for sdf file
-        molecule = Chem.SDMolSupplier(path, sanitize=False)[0]
-        # for mol2 file
-        # molecule = Chem.MolFromMol2File(path)
+    elif type_mol == "Ligand":
+        if which_file_ligand == "sdf":
+            molecule = Chem.SDMolSupplier(path, sanitize=False,
+                                          removeHs=False)[0]
+        elif which_file_ligand == "mol2":
+            molecule = Chem.MolFromMol2File(path,
+                                            sanitize=False,
+                                            removeHs=False)
 
     elements_idx = []
     conformer = molecule.GetConformer(0)
@@ -105,7 +113,7 @@ def molecule_info(path, type_mol, num_atoms_additional):
     for idx in range(num_atoms):
         atom_symbol = atoms[idx].GetSymbol()
         elements_idx += [ele2num[atom_symbol]]
-        # here can be more relevant properties like VanDerWalls radius e.g.
+        # TODO(sofia): Add more relevant properties
 
     atoms = vector2onehot(elements_idx, num_feat)
 

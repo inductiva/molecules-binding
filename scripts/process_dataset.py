@@ -28,26 +28,31 @@ flags.DEFINE_enum("which_dataset", None, ["refined_set", "core_set"],
                   "either refined_set or core_set")
 flags.mark_flag_as_required("which_dataset")
 
+flags.DEFINE_enum("which_file_ligand", "sdf", ["sdf", "mol2"],
+                  "can choose either mol2 or sdf files")
+
 flags.DEFINE_enum("which_model", "graphnet", ["graphnet", "mlp"],
                   "choose the model")
 
 
 def create_dataset(direct: str, aff_dir: str, path: str, threshold: float,
-                   which_dataset: str, which_model: str):
-    pdb_files = read_dataset(direct, which_dataset)
+                   which_dataset: str, which_model: str,
+                   which_file_ligand: str):
+    pdb_files = read_dataset(direct, which_dataset, which_file_ligand)
     aff_d = get_affinities(aff_dir)
 
     if which_model == "graphnet":
-        datasetg = GraphDataset(pdb_files[:3], aff_d, threshold)
+        datasetg = GraphDataset(pdb_files, aff_d, threshold, which_file_ligand)
         torch.save(datasetg, path)
     elif which_model == "mlp":
-        datasetv = VectorDataset(pdb_files, aff_d)
+        datasetv = VectorDataset(pdb_files, aff_d, which_file_ligand)
         torch.save(datasetv, path)
 
 
 def main(_):
     create_dataset(FLAGS.data_dir, FLAGS.aff_dir, FLAGS.path_dataset,
-                   FLAGS.threshold, FLAGS.which_dataset, FLAGS.which_model)
+                   FLAGS.threshold, FLAGS.which_dataset, FLAGS.which_model,
+                   FLAGS.which_file_ligand)
 
 
 if __name__ == "__main__":
