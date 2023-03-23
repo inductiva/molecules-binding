@@ -8,9 +8,9 @@ import re
 import os
 
 
-def get_affinities(dir_affinity):
-    aff_dict = {}
-    with open(dir_affinity, "r", encoding="utf-8") as f:
+def get_affinities(affinity_directory):
+    affinity_dict = {}
+    with open(affinity_directory, "r", encoding="utf-8") as f:
         for line in f:
             if line[0] != "#":
                 fields = line.split()
@@ -23,29 +23,24 @@ def get_affinities(dir_affinity):
                 assert label in ["Kd", "Ki", "IC50"]
                 affinity_value = float(aff_unity[:-2])
                 aff = float(affinity_value)
-                aff_dict[pdb_id] = [label, aff, log_aff]
-    return aff_dict
+                affinity_dict[pdb_id] = [label, aff, log_aff]
+    return affinity_dict
 
 
 def read_dataset(directory, which_dataset, which_file_ligand):
     # creates a list of pdb_id, path to protein, path to ligand
     pdb_files = []
-    if which_dataset == "refined_set":
-        index_pdb = 2
-    elif which_dataset == "core_set":
-        index_pdb = 3
-
-    if which_file_ligand == "sdf":
-        index_ligand = 1
-    elif which_file_ligand == "mol2":
-        index_ligand = 0
+    which_protein_file = {"refined_set": 2, "core_set": 3}
+    which_ligand_file = {"sdf": 1, "mol2": 0}
 
     for filename in os.listdir(directory):
         f = os.path.join(directory, filename)
         files = os.listdir(f)
         pdb_id = filename
-        pdb_files += [(pdb_id, os.path.join(f, files[index_pdb]),
-                       os.path.join(f, files[index_ligand]))]
+        pdb_files += [
+            (pdb_id, os.path.join(f, files[which_protein_file[which_dataset]]),
+             os.path.join(f, files[which_ligand_file[which_file_ligand]]))
+        ]
 
     return pdb_files
 
