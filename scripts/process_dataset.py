@@ -10,9 +10,9 @@ from absl import app
 
 FLAGS = flags.FLAGS
 
-flags.DEFINE_string("affinity_directory", None,
+flags.DEFINE_string("affinity_dir", None,
                     "specify the path to the index of the dataset")
-flags.mark_flag_as_required("affinity_directory")
+flags.mark_flag_as_required("affinity_dir")
 
 flags.DEFINE_string("data_dir", None, "specify the path to the dataset")
 flags.mark_flag_as_required("data_dir")
@@ -35,11 +35,11 @@ flags.DEFINE_enum("which_model", "graphnet", ["graphnet", "mlp"],
                   "choose the model")
 
 
-def create_dataset(direct: str, affinity_directory: str, path: str,
-                   threshold: float, which_dataset: str, which_model: str,
+def create_dataset(direct: str, affinity_dir: str, path: str, threshold: float,
+                   which_dataset: str, which_model: str,
                    which_file_ligand: str):
     pdb_files = read_dataset(direct, which_dataset, which_file_ligand)
-    affinity_dict = get_affinities(affinity_directory)
+    affinity_dict = get_affinities(affinity_dir)
 
     if which_model == "graphnet":
         datasetg = GraphDataset(pdb_files, affinity_dict, threshold)
@@ -50,7 +50,7 @@ def create_dataset(direct: str, affinity_directory: str, path: str,
 
 
 def main(_):
-    create_dataset(FLAGS.data_dir, FLAGS.affinity_directory, FLAGS.path_dataset,
+    create_dataset(FLAGS.data_dir, FLAGS.affinity_dir, FLAGS.path_dataset,
                    FLAGS.threshold, FLAGS.which_dataset, FLAGS.which_model,
                    FLAGS.which_file_ligand)
 
