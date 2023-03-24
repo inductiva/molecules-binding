@@ -46,44 +46,39 @@ def read_dataset(directory, which_dataset, which_file_ligand):
 
 
 ele2num = {
-    "H": 1,
-    "O": 2,
-    "N": 3,
-    "C": 4,
-    "S": 5,
-    "Se": 6,
-    "P": 7,
-    "F": 8,
-    "Cl": 8,
-    "Br": 8,
-    "I": 8,
-    "Mg": 9,
-    "Ca": 9,
-    "Sr": 9,
-    "Na": 9,
-    "K": 9,
-    "Cs": 9,
-    "Mn": 9,
-    "Fe": 9,
-    "Co": 9,
-    "Ni": 9,
-    "Cu": 9,
-    "Zn": 9,
-    "Cd": 9,
-    "Hg": 9
+    "H": 0,
+    "O": 1,
+    "N": 2,
+    "C": 3,
+    "S": 4,
+    "Se": 5,
+    "P": 6,
+    "F": 7,
+    "Cl": 7,
+    "Br": 7,
+    "I": 7,
+    "Mg": 8,
+    "Ca": 8,
+    "Sr": 8,
+    "Na": 8,
+    "K": 8,
+    "Cs": 8,
+    "Mn": 8,
+    "Fe": 8,
+    "Co": 8,
+    "Ni": 8,
+    "Cu": 8,
+    "Zn": 8,
+    "Cd": 8,
+    "Hg": 8
 }
 
-num_feat = max(ele2num.values()) + 1
-num_features = num_feat + 3
+num_atom_types = max(ele2num.values()) + 1
+
+pt = Chem.GetPeriodicTable()
 
 
-def vector2onehot(vector, n_features):
-    onehotvector = np.zeros((len(vector), n_features))
-    onehotvector[np.arange(len(vector)), vector] = 1
-    return onehotvector
-
-
-def molecule_info(path, type_mol, num_atoms_additional):
+def molecule_info(path, type_mol, num_atoms_ligand):
     """from path returns the coordinates, atoms and
     bonds of molecule"""
 
@@ -102,21 +97,34 @@ def molecule_info(path, type_mol, num_atoms_additional):
                                             sanitize=False,
                                             removeHs=False)
 
-    elements_idx = []
+    atom_features = []
     conformer = molecule.GetConformer(0)
-    atoms = molecule.GetAtoms()
     num_atoms = molecule.GetNumAtoms()
-    for idx in range(num_atoms):
-        atom_symbol = atoms[idx].GetSymbol()
-        elements_idx += [ele2num[atom_symbol]]
-        # TODO(sofia): Add more relevant properties
-
-    atoms = vector2onehot(elements_idx, num_feat)
 
     if type_mol == "Ligand":
-        atoms[np.arange(num_atoms), 0] = 1
+        first_elem = [1]
+    else:
+        first_elem = [0]
 
-    atoms = torch.as_tensor(atoms)
+    for atom in molecule.GetAtoms():
+        atom_symbol = atom.GetSymbol()
+        onehot_elem = np.zeros(num_atom_types)
+        onehot_elem[ele2num[atom_symbol]] = 1
+
+        van_der_waals_radius = pt.GetRvdw(atom_symbol)
+        covalent_radius = pt.GetRcovalent(atom_symbol)
+
+        atom_features += [[
+            *first_elem, *onehot_elem, *[
+                atom.GetTotalValence(),
+                atom.GetExplicitValence(),
+                atom.GetImplicitValence(),
+                atom.GetFormalCharge(),
+                atom.IsInRing(), van_der_waals_radius, covalent_radius
+            ]
+        ]]
+
+    atom_features = torch.as_tensor(atom_features)
 
     coords = conformer.GetPositions()
 
@@ -127,12 +135,12 @@ def molecule_info(path, type_mol, num_atoms_additional):
     for bond in molecule.GetBonds():
         i = bond.GetBeginAtomIdx()
         j = bond.GetEndAtomIdx()
-        rows_l += [i + num_atoms_additional, j + num_atoms_additional]
-        cols_l += [j + num_atoms_additional, i + num_atoms_additional]
+        rows_l += [i + num_atoms_ligand, j + num_atoms_ligand]
+        cols_l += [j + num_atoms_ligand, i + num_atoms_ligand]
         length = np.linalg.norm(coords[i] - coords[j])
         edges_length += [length, length]
 
     edges = torch.as_tensor([rows_l, cols_l])
     edges_length = torch.as_tensor(edges_length)
 
-    return (coords, atoms, edges, edges_length, num_atoms)
+    return (coords, atom_features, edges, edges_length, num_atoms)
