@@ -27,20 +27,24 @@ def get_affinities(affinity_directory):
     return affinity_dict
 
 
-def read_dataset(directory, which_dataset, which_file_ligand):
+def read_dataset(directory, ligand_file_extention):
     # creates a list of pdb_id, path to protein, path to ligand
+    assert ligand_file_extention in ("sdf", "mol2")
     pdb_files = []
-    which_protein_file = {"refined_set": 2, "core_set": 3}
-    which_ligand_file = {"sdf": 1, "mol2": 0}
 
     for filename in os.listdir(directory):
         f = os.path.join(directory, filename)
         files = os.listdir(f)
         pdb_id = filename
-        pdb_files += [
-            (pdb_id, os.path.join(f, files[which_protein_file[which_dataset]]),
-             os.path.join(f, files[which_ligand_file[which_file_ligand]]))
-        ]
+
+        for file in files:
+            if file.endswith("pocket.pdb"):
+                file_protein = file
+            elif file.endswith("ligand." + ligand_file_extention):
+                file_ligand = file
+
+        pdb_files += [(pdb_id, os.path.join(f, file_protein),
+                       os.path.join(f, file_ligand))]
 
     return pdb_files
 
@@ -89,6 +93,7 @@ def molecule_info(path, type_mol, num_atoms_ligand):
                                        removeHs=False)
 
     elif type_mol == "Ligand":
+
         if path[-4:] == ".sdf":
             molecule = Chem.SDMolSupplier(path, sanitize=False,
                                           removeHs=False)[0]

@@ -24,10 +24,6 @@ flags.mark_flag_as_required("path_dataset")
 flags.DEFINE_float("threshold", 6,
                    "maximum length of edges between protein and ligand")
 
-flags.DEFINE_enum("which_dataset", None, ["refined_set", "core_set"],
-                  "either refined_set or core_set")
-flags.mark_flag_as_required("which_dataset")
-
 flags.DEFINE_enum("which_file_ligand", "sdf", ["sdf", "mol2"],
                   "can choose either mol2 or sdf files")
 
@@ -36,9 +32,8 @@ flags.DEFINE_enum("which_model", "graphnet", ["graphnet", "mlp"],
 
 
 def create_dataset(direct: str, affinity_dir: str, path: str, threshold: float,
-                   which_dataset: str, which_model: str,
-                   which_file_ligand: str):
-    pdb_files = read_dataset(direct, which_dataset, which_file_ligand)
+                   which_model: str, which_file_ligand: str):
+    pdb_files = read_dataset(direct, which_file_ligand)
     affinity_dict = get_affinities(affinity_dir)
 
     if which_model == "graphnet":
@@ -51,8 +46,7 @@ def create_dataset(direct: str, affinity_dir: str, path: str, threshold: float,
 
 def main(_):
     create_dataset(FLAGS.data_dir, FLAGS.affinity_dir, FLAGS.path_dataset,
-                   FLAGS.threshold, FLAGS.which_dataset, FLAGS.which_model,
-                   FLAGS.which_file_ligand)
+                   FLAGS.threshold, FLAGS.which_model, FLAGS.which_file_ligand)
 
 
 if __name__ == "__main__":
