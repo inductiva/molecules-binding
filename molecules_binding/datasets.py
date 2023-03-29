@@ -84,7 +84,7 @@ class GraphDataset(Dataset):
                      edge_index=edges,
                      pos=coords,
                      edge_attr=edges_atrr,
-                     y=torch.as_tensor(np.float64(aff_d[comp_name][2])))
+                     y=torch.as_tensor(np.float64(aff_d[comp_name][1])))
             ]
 
         self.data_list = data_list
@@ -133,7 +133,7 @@ class VectorDataset(torch.utils.data.Dataset):
             data += [(torch.cat((torch.as_tensor(ligand_coord), atoms_ligand),
                                 dim=1),
                       torch.cat((torch.as_tensor(protein_coord), atoms_protein),
-                                dim=1), aff_dict[comp_name][2])]
+                                dim=1), aff_dict[comp_name][1])]
 
         self.data = data
         self.max_len_p = max_len_p

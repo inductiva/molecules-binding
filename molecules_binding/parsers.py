@@ -19,11 +19,12 @@ def get_affinities(affinity_directory):
                 aff_str = fields[4]
                 aff_tokens = re.split("[=<>~]+", aff_str)
                 assert len(aff_tokens) == 2
-                label, aff_unity = aff_tokens
+                label, aff_and_unity = aff_tokens
                 assert label in ["Kd", "Ki", "IC50"]
-                affinity_value = float(aff_unity[:-2])
+                affinity_value = float(aff_and_unity[:-2])
+                aff_unity = aff_and_unity[-2:]
                 aff = float(affinity_value)
-                affinity_dict[pdb_id] = [label, aff, log_aff]
+                affinity_dict[pdb_id] = [label, log_aff, aff, aff_unity]
     return affinity_dict
 
 
@@ -31,20 +32,20 @@ def read_dataset(directory, ligand_file_extention):
     # creates a list of pdb_id, path to protein, path to ligand
     assert ligand_file_extention in ("sdf", "mol2")
     pdb_files = []
-
     for filename in os.listdir(directory):
-        f = os.path.join(directory, filename)
-        files = os.listdir(f)
-        pdb_id = filename
+        if len(filename) == 4:
+            f = os.path.join(directory, filename)
+            files = os.listdir(f)
+            pdb_id = filename
 
-        for file in files:
-            if file.endswith("pocket.pdb"):
-                file_protein = file
-            elif file.endswith("ligand." + ligand_file_extention):
-                file_ligand = file
+            for file in files:
+                if file.endswith("pocket.pdb"):
+                    file_protein = file
+                elif file.endswith("ligand." + ligand_file_extention):
+                    file_ligand = file
 
-        pdb_files += [(pdb_id, os.path.join(f, file_protein),
-                       os.path.join(f, file_ligand))]
+            pdb_files += [(pdb_id, os.path.join(f, file_protein),
+                           os.path.join(f, file_ligand))]
 
     return pdb_files
 
