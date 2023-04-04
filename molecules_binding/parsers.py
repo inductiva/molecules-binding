@@ -148,8 +148,8 @@ def molecule_info(path, type_mol, num_atoms_ligand):
         cols_l += [j + num_atoms_ligand, i + num_atoms_ligand]
         length = np.linalg.norm(coords[i] - coords[j])
 
-        vector_ij = list(coords[j] - coords[i])
-        vector_ji = list(coords[i] - coords[j])
+        vector_ij = list((coords[j] - coords[i]) / length)
+        vector_ji = list((coords[i] - coords[j]) / length)
 
         edges_features += [[*vector_ij, length, bond_type, bond_in_ring],
                            [*vector_ji, length, bond_type, bond_in_ring]]
