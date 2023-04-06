@@ -13,23 +13,28 @@ def create_edges_protein_ligand(num_atoms_ligand, num_atoms_protein,
     Builds the edges between protein and ligand molecules, with length
     under a threshold
     """
-    edges_dis_both = []
     rows_both = []
     cols_both = []
+    edges_features = []
 
     for atom_l in range(num_atoms_ligand):
         for atom_p in range(num_atoms_protein):
             posl = ligand_coord[atom_l]
             posp = protein_coord[atom_p]
-            dis = np.linalg.norm(posl - posp)
-            if dis <= threshold:
+            distance = np.linalg.norm(posl - posp)
+            if distance <= threshold:
                 rows_both += [atom_l, num_atoms_ligand + atom_p]
                 cols_both += [num_atoms_ligand + atom_p, atom_l]
-                edges_dis_both += [dis, dis]
+
+                vector_ij = list((posl - posp) / distance)
+                vector_ji = list((posp - posl) / distance)
+
+                edges_features += [[*vector_ij, distance, 0, 0],
+                                   [*vector_ji, distance, 0, 0]]
 
     edges_both = torch.as_tensor([rows_both, cols_both])
-    edges_dis_both = torch.as_tensor(edges_dis_both)
-    return edges_both, edges_dis_both
+    edges_features = torch.as_tensor(edges_features)
+    return edges_both, edges_features
 
 
 class GraphDataset(Dataset):

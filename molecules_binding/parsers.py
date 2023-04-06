@@ -111,14 +111,21 @@ def molecule_info(path, type_mol, num_atoms_ligand):
         onehot_elem = np.zeros(num_atom_types)
         onehot_elem[ele2num[atom_symbol]] = 1
 
+        onehot_total_valence = np.zeros(8)
+        onehot_total_valence[atom.GetTotalValence()] = 1
+
+        onehot_explicit_valence = np.zeros(8)
+        onehot_explicit_valence[atom.GetExplicitValence()] = 1
+
+        onehot_implicit_valence = np.zeros(4)
+        onehot_implicit_valence[atom.GetImplicitValence()] = 1
+
         van_der_waals_radius = pt.GetRvdw(atom_symbol)
         covalent_radius = pt.GetRcovalent(atom_symbol)
 
         atom_features += [[
-            *first_elem, *onehot_elem, *[
-                atom.GetTotalValence(),
-                atom.GetExplicitValence(),
-                atom.GetImplicitValence(),
+            *first_elem, *onehot_elem, *onehot_total_valence,
+            *onehot_explicit_valence, *onehot_implicit_valence, *[
                 atom.GetFormalCharge(),
                 atom.IsInRing(), van_der_waals_radius, covalent_radius
             ]
@@ -131,16 +138,24 @@ def molecule_info(path, type_mol, num_atoms_ligand):
     rows_l = []
     cols_l = []
 
-    edges_length = []
+    edges_features = []
     for bond in molecule.GetBonds():
         i = bond.GetBeginAtomIdx()
         j = bond.GetEndAtomIdx()
+        bond_type = bond.GetBondTypeAsDouble()
+        bond_in_ring = bond.IsInRing()
         rows_l += [i + num_atoms_ligand, j + num_atoms_ligand]
         cols_l += [j + num_atoms_ligand, i + num_atoms_ligand]
         length = np.linalg.norm(coords[i] - coords[j])
-        edges_length += [length, length]
+
+        vector_ij = list((coords[j] - coords[i]) / length)
+        vector_ji = list((coords[i] - coords[j]) / length)
+
+        edges_features += [[*vector_ij, length, bond_type, bond_in_ring],
+                           [*vector_ji, length, bond_type, bond_in_ring]]
 
     edges = torch.as_tensor([rows_l, cols_l])
-    edges_length = torch.as_tensor(edges_length)
 
-    return (coords, atom_features, edges, edges_length, num_atoms)
+    edges_features = torch.as_tensor(edges_features)
+
+    return (coords, atom_features, edges, edges_features, num_atoms)
