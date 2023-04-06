@@ -8,3 +8,4 @@ env_vars:
 excludes:
   - .git
   - lightning_logs
+  - env_mol_bind
