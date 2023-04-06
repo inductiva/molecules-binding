@@ -28,9 +28,10 @@ def get_affinities(affinity_directory):
     return affinity_dict
 
 
-def read_dataset(directory, ligand_file_extention):
+def read_dataset(directory, ligand_file_extention, protein_file_extention):
     # creates a list of pdb_id, path to protein, path to ligand
     assert ligand_file_extention in ("sdf", "mol2")
+    assert protein_file_extention in ("protein", "pocket")
     pdb_files = []
     for filename in os.listdir(directory):
         if len(filename) == 4:
@@ -39,7 +40,7 @@ def read_dataset(directory, ligand_file_extention):
             pdb_id = filename
 
             for file in files:
-                if file.endswith("pocket.pdb"):
+                if file.endswith(protein_file_extention + ".pdb"):
                     file_protein = file
                 elif file.endswith("ligand." + ligand_file_extention):
                     file_ligand = file
