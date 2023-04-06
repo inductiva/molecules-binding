@@ -45,7 +45,7 @@ class GraphNN(MessagePassing):
         layers = []
         pairs = list(zip(layer_sizes, layer_sizes[1:]))
 
-        for ins, outs in pairs: # [:-1]:
+        for ins, outs in pairs:  # [:-1]:
             layers.append(GATConv(ins, outs))
 
         # (ins, outs) = pairs[-1]
