@@ -3,6 +3,7 @@ Lightning Code
 """
 import torch
 import pytorch_lightning as pl
+from scipy.stats import pearsonr, spearmanr
 
 
 class GraphNNLightning(pl.LightningModule):
@@ -24,6 +25,15 @@ class GraphNNLightning(pl.LightningModule):
         outputs = self.model(data, data.batch, self.dropout_rate)
         return self.criterion(labels, outputs)
 
+    def compute_statistics(self, data):
+        labels = data.y.unsqueeze(1)
+        outputs = self.model(data, data.batch, self.dropout_rate)
+        mae = torch.nn.functional.l1_loss(outputs, labels)
+        rmse = torch.sqrt(torch.nn.functional.mse_loss(outputs, labels))
+        pearson_correlation = pearsonr(outputs.squeeze(), labels.squeeze())[0]
+        spearman_correlation = spearmanr(outputs, labels)[0]
+        return mae, rmse, pearson_correlation, spearman_correlation
+
     def training_step(self, data, _):
         loss = self.compute_loss(data)
         self.log("loss", loss, batch_size=self.batch_size)
@@ -34,11 +44,37 @@ class GraphNNLightning(pl.LightningModule):
 
     def validation_step(self, data, _):
         val_loss = self.compute_loss(data)
+        (mae, rmse, pearson_correlation,
+         spearman_correlation) = self.compute_statistics(data)
         self.log("val_loss",
                  val_loss,
                  on_step=False,
                  on_epoch=True,
                  prog_bar=True,
+                 batch_size=self.batch_size)
+        self.log("val_mae",
+                 mae,
+                 on_step=False,
+                 on_epoch=True,
+                 prog_bar=False,
+                 batch_size=self.batch_size)
+        self.log("val_rmse",
+                 rmse,
+                 on_step=False,
+                 on_epoch=True,
+                 prog_bar=False,
+                 batch_size=self.batch_size)
+        self.log("val_pearson",
+                 pearson_correlation,
+                 on_step=False,
+                 on_epoch=True,
+                 prog_bar=False,
+                 batch_size=self.batch_size)
+        self.log("val_spearman",
+                 spearman_correlation,
+                 on_step=False,
+                 on_epoch=True,
+                 prog_bar=False,
                  batch_size=self.batch_size)
         return {"val_loss": val_loss}
 
