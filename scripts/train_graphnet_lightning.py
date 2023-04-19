@@ -23,7 +23,7 @@ flags.DEFINE_float("dropout_rate", 0.3, "Dropout rate")
 flags.DEFINE_float("train_perc", 0.9, "percentage of train-validation-split")
 flags.DEFINE_list("num_hidden_graph", [64, 96, 128],
                   "size of message passing layers")
-flags.DEFINE_list("num_hidden_linear", [64], "size of linear layers")
+flags.DEFINE_list("num_hidden_linear", [], "size of linear layers")
 flags.DEFINE_integer("batch_size", 32, "batch size")
 flags.DEFINE_integer("max_epochs", 300, "number of epochs")
 flags.DEFINE_integer("num_workers", 3, "number of workers")

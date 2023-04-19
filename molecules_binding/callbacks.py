@@ -30,17 +30,3 @@ class LossMonitor(Callback):
 
         with mlflow.start_run(run_id=self.run_id):
             mlflow.log_metrics(metrics, step=trainer.current_epoch)
-
-
-# class Metrics(Callback):
-
-#     def __init__(self, run_id, data) -> None:
-#         super().__init__()
-
-#     def on_validation_epoch_end(self, trainer, pl_module):
-#         model = pl_module.model
-
-#         pearson_coorrelation = torch.nn.functional.pearsonr(outputs, labels)
-#         spearman_correlation = torch.nn.functional.spearmanr(outputs, labels)
-#         mae = torch.nn.functional.l1_loss(outputs, labels)
-#         rmse = torch.sqrt(torch.nn.functional.mse_loss(outputs, labels))
