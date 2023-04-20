@@ -138,8 +138,7 @@ def main(_):
 
     graph_layer_sizes = list(map(int, FLAGS.num_hidden_graph))
     linear_layer_sizes = list(map(int, FLAGS.num_hidden_linear))
-    model = GraphNN(dataset[0].num_node_features,
-                    graph_layer_sizes,
+    model = GraphNN(dataset[0].num_node_features, graph_layer_sizes,
                     linear_layer_sizes)
     model = model.to(device)
     model.double()
