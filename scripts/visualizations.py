@@ -14,7 +14,8 @@ flags.DEFINE_string("path_visualization", None,
 
 
 def main(_):
-    graph = torch.load(FLAGS.path_file)
+    dataset = torch.load(FLAGS.path_file)
+    graph = dataset[0]
     draw_graph(graph, FLAGS.path_visualization)
 
 
