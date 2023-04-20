@@ -2,7 +2,6 @@
 Train the GNN
 """
 from molecules_binding.models import GraphNN
-from molecules_binding.parsers import num_features
 from torch_geometric.loader import DataLoader
 import torch
 import matplotlib.pyplot as plt
@@ -22,8 +21,10 @@ flags.DEFINE_float("train_perc", 0.8, "percentage of train-validation-split")
 
 flags.DEFINE_integer("batch_size", 8, "batch size")
 
-flags.DEFINE_list("num_hidden", [40, 30, 30, 40],
-                  "size of the new features after conv layer")
+flags.DEFINE_list("num_hidden_graph", [64, 96, 128],
+                  "size of message passing layers")
+
+flags.DEFINE_list("num_hidden_linear", [], "size of linear layers")
 
 flags.DEFINE_integer("num_epochs", 30, "number of epochs")
 
@@ -135,9 +136,11 @@ def main(_):
                              shuffle=False)
     stat_loader = DataLoader(test_dataset, batch_size=1, shuffle=False)
 
-    layer_sizes = list(map(int, FLAGS.num_hidden))
-
-    model = GraphNN(hidden_channels=layer_sizes, num_node_features=num_features)
+    graph_layer_sizes = list(map(int, FLAGS.num_hidden_graph))
+    linear_layer_sizes = list(map(int, FLAGS.num_hidden_linear))
+    model = GraphNN(dataset[0].num_node_features,
+                    graph_layer_sizes,
+                    linear_layer_sizes)
     model = model.to(device)
     model.double()
     optimizer = torch.optim.Adam(model.parameters(), lr=FLAGS.learning_rate)
