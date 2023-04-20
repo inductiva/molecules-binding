@@ -20,22 +20,21 @@ class GraphNNLightning(pl.LightningModule):
         self.dropout_rate = dropout_rate
         self.criterion = torch.nn.MSELoss()
 
-    def compute_loss(self, data):
+    def compute_statistics(self, data, training):
         labels = data.y.unsqueeze(1)
         outputs = self.model(data, data.batch, self.dropout_rate)
-        return self.criterion(labels, outputs)
-
-    def compute_statistics(self, data):
-        labels = data.y.unsqueeze(1)
-        outputs = self.model(data, data.batch, self.dropout_rate)
+        if training:
+            loss = self.criterion(labels, outputs)
+            return loss  # , None, None, None, None
+        loss = self.criterion(labels, outputs)
         mae = torch.nn.functional.l1_loss(outputs, labels)
         rmse = torch.sqrt(torch.nn.functional.mse_loss(outputs, labels))
         pearson_correlation = pearsonr(outputs.squeeze(), labels.squeeze())[0]
         spearman_correlation = spearmanr(outputs, labels)[0]
-        return mae, rmse, pearson_correlation, spearman_correlation
+        return loss, mae, rmse, pearson_correlation, spearman_correlation
 
     def training_step(self, data, _):
-        loss = self.compute_loss(data)
+        loss = self.compute_statistics(data, training=True)
         self.log("loss", loss, batch_size=self.batch_size)
         return {"loss": loss}
 
@@ -43,9 +42,8 @@ class GraphNNLightning(pl.LightningModule):
         return torch.optim.Adam(self.model.parameters(), lr=self.learning_rate)
 
     def validation_step(self, data, _):
-        val_loss = self.compute_loss(data)
-        (mae, rmse, pearson_correlation,
-         spearman_correlation) = self.compute_statistics(data)
+        (val_loss, mae, rmse, pearson_correlation,
+         spearman_correlation) = self.compute_statistics(data, training=False)
         self.log("val_loss",
                  val_loss,
                  on_step=False,

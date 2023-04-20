@@ -3,7 +3,7 @@ Lightning Code
 """
 import torch
 from molecules_binding.models import GraphNN
-from molecules_binding.callbacks import LossMonitor
+from molecules_binding.callbacks import LossMonitor, MetricsMonitor
 from molecules_binding.lightning_wrapper import GraphNNLightning
 from torch_geometric.loader import DataLoader
 from pytorch_lightning import Trainer
@@ -83,7 +83,8 @@ def main(_):
                         comment=FLAGS.add_comment)
         run_id = mlflow.active_run().info.run_id
         loss_callback = LossMonitor(run_id)
-        callbacks = [loss_callback]
+        metrics_callback = MetricsMonitor(run_id)
+        callbacks = [loss_callback, metrics_callback]
 
     if FLAGS.use_ray:
         ray.init()
