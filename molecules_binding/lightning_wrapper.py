@@ -25,8 +25,10 @@ class GraphNNLightning(pl.LightningModule):
         outputs = self.model(data, data.batch, self.dropout_rate)
         if training:
             loss = self.criterion(labels, outputs)
-            return loss  # , None, None, None, None
+            return loss, None, None, None, None
         loss = self.criterion(labels, outputs)
+        labels = labels.cpu()
+        outputs = outputs.cpu()
         mae = torch.nn.functional.l1_loss(outputs, labels)
         rmse = torch.sqrt(torch.nn.functional.mse_loss(outputs, labels))
         pearson_correlation = pearsonr(outputs.squeeze(), labels.squeeze())[0]
@@ -34,7 +36,7 @@ class GraphNNLightning(pl.LightningModule):
         return loss, mae, rmse, pearson_correlation, spearman_correlation
 
     def training_step(self, data, _):
-        loss = self.compute_statistics(data, training=True)
+        loss, _, _, _, _ = self.compute_statistics(data, training=True)
         self.log("loss", loss, batch_size=self.batch_size)
         return {"loss": loss}
 
