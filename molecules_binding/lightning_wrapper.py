@@ -27,12 +27,11 @@ class GraphNNLightning(pl.LightningModule):
             loss = self.criterion(labels, outputs)
             return loss, None, None, None, None
         loss = self.criterion(labels, outputs)
-        labels = labels.cpu()
-        outputs = outputs.cpu()
         mae = torch.nn.functional.l1_loss(outputs, labels)
         rmse = torch.sqrt(torch.nn.functional.mse_loss(outputs, labels))
-        pearson_correlation = pearsonr(outputs.squeeze(), labels.squeeze())[0]
-        spearman_correlation = spearmanr(outputs, labels)[0]
+        pearson_correlation = pearsonr(outputs.cpu().squeeze(),
+                                       labels.cpu().squeeze())[0]
+        spearman_correlation = spearmanr(outputs.cpu(), labels.cpu())[0]
         return loss, mae, rmse, pearson_correlation, spearman_correlation
 
     def training_step(self, data, _):
