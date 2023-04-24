@@ -29,7 +29,15 @@ def get_affinities(affinity_directory):
 
 
 def read_dataset(directory, ligand_file_extention, protein_file_extention):
-    # creates a list of pdb_id, path to protein, path to ligand
+    """
+    from directory returns a list of pdb_id, path to protein, path to ligand
+    The directory contains compound folders (each has an ID with 4 letters,
+    ex. abcd) with 4 files:
+    - abcd_protein.pdb
+    - abcd_pocket.pdb
+    - abcd_ligand.sdf
+    - abcd_ligand.mol2
+    """
     assert ligand_file_extention in ("sdf", "mol2")
     assert protein_file_extention in ("protein", "pocket")
     pdb_files = []
