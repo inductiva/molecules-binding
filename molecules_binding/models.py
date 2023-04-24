@@ -33,7 +33,8 @@ class GraphNN(MessagePassing):
         Graph Convolution Neural Network
     """
 
-    def __init__(self, hidden_channels, num_node_features):
+    def __init__(self, num_node_features, layer_sizes_graph,
+                 layer_sizes_linear):
         """
         Parameters:
             hidden_channels (int): Number of features for each node
@@ -41,15 +42,23 @@ class GraphNN(MessagePassing):
         """
         super().__init__(aggr='add')
 
-        layer_sizes = [num_node_features] + hidden_channels
-        layers = []
-        pairs = list(zip(layer_sizes, layer_sizes[1:]))
+        graph_layer_sizes = [num_node_features] + layer_sizes_graph
+        graph_layers = []
+        pairs_graph = list(zip(graph_layer_sizes, graph_layer_sizes[1:]))
 
-        for ins, outs in pairs:
-            layers.append(GATConv(ins, outs))
+        for ins, outs in pairs_graph:
+            graph_layers.append(GATConv(ins, outs))
 
-        self.layers = nn.ModuleList(layers)
-        self.lin = nn.Linear(layer_sizes[-1], 1)
+        self.graph_layers = nn.ModuleList(graph_layers)
+
+        linear_layer_sizes = [layer_sizes_graph[-1]] + layer_sizes_linear
+        linear_layers = []
+        pairs_linear = list(zip(linear_layer_sizes, linear_layer_sizes[1:]))
+        for ins, outs in pairs_linear:
+            linear_layers.append(nn.Linear(ins, outs))
+
+        self.linear_layers = nn.ModuleList(linear_layers)
+        self.last_layer = nn.Linear(linear_layer_sizes[-1], 1)
 
     def forward(self, data, batch, dropout_rate):
         """
@@ -58,13 +67,19 @@ class GraphNN(MessagePassing):
         """
         x, edge_index, edge_attrs = data.x, data.edge_index, data.edge_attr
 
-        for layer in self.layers:
+        for layer in self.graph_layers:
             x = layer(x, edge_index, edge_attrs)
             x = nn.ReLU()(x)
 
         x = global_mean_pool(x, batch)
 
         x = F.dropout(x, p=dropout_rate, training=self.training)
-        x = self.lin(x)
+
+        for layer in self.linear_layers:
+            x = layer(x)
+            x = nn.ReLU()(x)
+            x = F.dropout(x, p=dropout_rate, training=self.training)
+
+        x = self.last_layer(x)
 
         return x

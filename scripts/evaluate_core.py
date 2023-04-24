@@ -3,7 +3,6 @@ Evaluate model on coreset
 """
 import torch
 from molecules_binding.models import GraphNN
-from molecules_binding.graphdataset import num_features
 from torch_geometric.loader import DataLoader
 from absl import flags
 from absl import app
@@ -11,8 +10,10 @@ import numpy as np
 from scipy.stats import spearmanr
 
 FLAGS = flags.FLAGS
-flags.DEFINE_multi_integer("num_hidden", [50, 40, 30, 30],
-                           "size of the new features after conv layer")
+flags.DEFINE_list("num_hidden_graph", [64, 96, 128],
+                  "size of message passing layers")
+
+flags.DEFINE_list("num_hidden_linear", [], "size of linear layers")
 
 flags.DEFINE_string("path_dataset", "../../core_dataset",
                     "specify the path to the stored processed dataset")
@@ -46,8 +47,10 @@ def main(_):
 
     dataset = torch.load(FLAGS.path_dataset)
     device = torch.device("cpu")
-    model = GraphNN(hidden_channels=FLAGS.num_hidden,
-                    num_node_features=num_features)
+    graph_layer_sizes = list(map(int, FLAGS.num_hidden_graph))
+    linear_layer_sizes = list(map(int, FLAGS.num_hidden_linear))
+    model = GraphNN(dataset[0].num_node_features, graph_layer_sizes,
+                    linear_layer_sizes)
     model.load_state_dict(torch.load("../../resultados01/model"))
     model = model.to(device)
     model = model.to(float)

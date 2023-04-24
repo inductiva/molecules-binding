@@ -12,3 +12,4 @@ pytorch_lightning
 mlflow
 absl-py
 ray_lightning
+scipy

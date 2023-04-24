@@ -3,7 +3,7 @@ Lightning Code
 """
 import torch
 from molecules_binding.models import GraphNN
-from molecules_binding.callbacks import LossMonitor
+from molecules_binding.callbacks import LossMonitor, MetricsMonitor
 from molecules_binding.lightning_wrapper import GraphNNLightning
 from torch_geometric.loader import DataLoader
 from pytorch_lightning import Trainer
@@ -20,13 +20,15 @@ flags.DEFINE_string("path_dataset", None,
 flags.mark_flag_as_required("path_dataset")
 flags.DEFINE_float("learning_rate", 0.001, "learning rate")
 flags.DEFINE_float("dropout_rate", 0.3, "Dropout rate")
-flags.DEFINE_list("num_hidden", [40, 30, 30, 40],
-                  "size of the new features after conv layer")
-flags.DEFINE_float("train_perc", 0.8, "percentage of train-validation-split")
+flags.DEFINE_float("train_perc", 0.9, "percentage of train-validation-split")
+flags.DEFINE_list("num_hidden_graph", [64, 96, 128],
+                  "size of message passing layers")
+flags.DEFINE_list("num_hidden_linear", [], "size of linear layers")
 flags.DEFINE_integer("batch_size", 32, "batch size")
 flags.DEFINE_integer("max_epochs", 300, "number of epochs")
 flags.DEFINE_integer("num_workers", 3, "number of workers")
 flags.DEFINE_boolean("use_gpu", True, "True if using gpu, False if not")
+flags.DEFINE_string("add_comment", None, "Add a comment to the experiment.")
 # Flags for Ray Training
 flags.DEFINE_boolean("use_ray", False, "Controls if it uses ray")
 flags.DEFINE_integer("num_cpus_per_worker", 1,
@@ -57,8 +59,10 @@ def main(_):
                             num_workers=FLAGS.num_workers,
                             shuffle=False)
 
-    layer_sizes = list(map(int, FLAGS.num_hidden))
-    model = GraphNN(layer_sizes, dataset[0].num_node_features)
+    graph_layer_sizes = list(map(int, FLAGS.num_hidden_graph))
+    linear_layer_sizes = list(map(int, FLAGS.num_hidden_linear))
+    model = GraphNN(dataset[0].num_node_features, graph_layer_sizes,
+                    linear_layer_sizes)
     model.double()
 
     lightning_model = GraphNNLightning(model, FLAGS.learning_rate,
@@ -74,10 +78,13 @@ def main(_):
         _log_parameters(batch_size=FLAGS.batch_size,
                         learning_rate=FLAGS.learning_rate,
                         dropout_rate=FLAGS.dropout_rate,
-                        num_hidden=FLAGS.num_hidden)
+                        num_hidden_graph=FLAGS.num_hidden_graph,
+                        num_hidden_linear=FLAGS.num_hidden_linear,
+                        comment=FLAGS.add_comment)
         run_id = mlflow.active_run().info.run_id
         loss_callback = LossMonitor(run_id)
-        callbacks = [loss_callback]
+        metrics_callback = MetricsMonitor(run_id)
+        callbacks = [loss_callback, metrics_callback]
 
     if FLAGS.use_ray:
         ray.init()
@@ -88,7 +95,6 @@ def main(_):
         trainer = Trainer(max_epochs=FLAGS.max_epochs,
                           strategy=plugin,
                           logger=False,
-                          devices=1,
                           callbacks=callbacks)
     else:
         accelerator = "gpu" if FLAGS.use_gpu else None
