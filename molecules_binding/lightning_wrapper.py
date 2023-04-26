@@ -93,13 +93,6 @@ class MLPLightning(pl.LightningModule):
         self.learning_rate = learning_rate
         self.criterion = torch.nn.MSELoss()
 
-    # def compute_loss(self, data):
-    #     inputs, labels = data
-    #     inputs = inputs.double()
-    #     labels = torch.unsqueeze(labels, -1).double()
-    #     outputs = self.model(inputs)
-    #     return self.criterion(outputs, labels)
-
     def compute_statistics(self, data, training):
         inputs, labels = data
         inputs = inputs.double()
