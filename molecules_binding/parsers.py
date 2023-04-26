@@ -19,30 +19,45 @@ def get_affinities(affinity_directory):
                 aff_str = fields[4]
                 aff_tokens = re.split("[=<>~]+", aff_str)
                 assert len(aff_tokens) == 2
-                label, aff_unity = aff_tokens
+                label, aff_and_unity = aff_tokens
                 assert label in ["Kd", "Ki", "IC50"]
-                affinity_value = float(aff_unity[:-2])
+                affinity_value = float(aff_and_unity[:-2])
+                aff_unity = aff_and_unity[-2:]
                 aff = float(affinity_value)
-                affinity_dict[pdb_id] = [label, aff, log_aff]
+                affinity_dict[pdb_id] = [label, log_aff, aff, aff_unity]
     return affinity_dict
 
 
-def read_dataset(directory, which_dataset, which_file_ligand):
-    # creates a list of pdb_id, path to protein, path to ligand
-    pdb_files = []
-    which_protein_file = {"refined_set": 2, "core_set": 3}
-    which_ligand_file = {"sdf": 1, "mol2": 0}
+def read_dataset(directory, ligand_file_extention, protein_file_extention):
+    """
+    from directory returns a list of pdb_id, path to protein, path to ligand
+    The directory contains compound folders (each has an ID with 4 letters,
+    ex. abcd) with 4 files:
+    - abcd_protein.pdb
+    - abcd_pocket.pdb
+    - abcd_ligand.sdf
+    - abcd_ligand.mol2
+    """
+    assert ligand_file_extention in ("sdf", "mol2")
+    assert protein_file_extention in ("protein", "pocket")
+    molecules_files = []
+    for folder_name in os.listdir(directory):
+        if len(folder_name) == 4:
+            folder_dir = os.path.join(directory, folder_name)
+            files = os.listdir(folder_dir)
+            compound_id = folder_name
 
-    for filename in os.listdir(directory):
-        f = os.path.join(directory, filename)
-        files = os.listdir(f)
-        pdb_id = filename
-        pdb_files += [
-            (pdb_id, os.path.join(f, files[which_protein_file[which_dataset]]),
-             os.path.join(f, files[which_ligand_file[which_file_ligand]]))
-        ]
+            for file in files:
+                if file.endswith(protein_file_extention + ".pdb"):
+                    file_protein = file
+                elif file.endswith("ligand." + ligand_file_extention):
+                    file_ligand = file
 
-    return pdb_files
+            molecules_files += [(compound_id,
+                                 os.path.join(folder_dir, file_protein),
+                                 os.path.join(folder_dir, file_ligand))]
+
+    return molecules_files
 
 
 ele2num = {
@@ -89,6 +104,7 @@ def molecule_info(path, type_mol, num_atoms_ligand):
                                        removeHs=False)
 
     elif type_mol == "Ligand":
+
         if path[-4:] == ".sdf":
             molecule = Chem.SDMolSupplier(path, sanitize=False,
                                           removeHs=False)[0]

@@ -1,0 +1,13 @@
+# ==============================================================================
+# This is a TESTDATA to test get_affinities
+# List of protein-ligand complexes with known binding data in PDBbind v.2020
+# 19443 protein-ligand complexes in total, sorted by binding data
+# Latest update: July 2021
+# PDB code, resolution, release year, -logKd/Ki, Kd/Ki, reference, ligand name
+# ==============================================================================
+3zzf  2.20  2012   0.40  Ki=400mM      // 3zzf.pdf (NLG)
+1hvl  1.80  1994   9.95  Ki=112pM      // 1hvl.pdf (A76)
+1zsb  2.00  1996   0.60  Kd=250mM      // 1zsb.pdf (AZM)
+4ux4  1.80  2015   7.01  IC50=97nM     // 4ux4.pdf (E9L)
+5a3s  3.30  2016   8.68  Kd=2.1nM      // 5a3q.pdf (128)
+2uyw  1.70  2008  13.00  Kd=0.1pM      // 2uyw.pdf (BTN)
