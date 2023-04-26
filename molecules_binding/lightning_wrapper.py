@@ -93,15 +93,31 @@ class MLPLightning(pl.LightningModule):
         self.learning_rate = learning_rate
         self.criterion = torch.nn.MSELoss()
 
-    def compute_loss(self, data):
+    # def compute_loss(self, data):
+    #     inputs, labels = data
+    #     inputs = inputs.double()
+    #     labels = torch.unsqueeze(labels, -1).double()
+    #     outputs = self.model(inputs)
+    #     return self.criterion(outputs, labels)
+
+    def compute_statistics(self, data, training):
         inputs, labels = data
         inputs = inputs.double()
         labels = torch.unsqueeze(labels, -1).double()
         outputs = self.model(inputs)
-        return self.criterion(outputs, labels)
+        if training:
+            loss = self.criterion(labels, outputs)
+            return loss, None, None, None, None
+        loss = self.criterion(labels, outputs)
+        mae = torch.nn.functional.l1_loss(outputs, labels)
+        rmse = torch.sqrt(torch.nn.functional.mse_loss(outputs, labels))
+        pearson_correlation = pearsonr(outputs.cpu().squeeze(),
+                                       labels.cpu().squeeze())[0]
+        spearman_correlation = spearmanr(outputs.cpu(), labels.cpu())[0]
+        return loss, mae, rmse, pearson_correlation, spearman_correlation
 
     def training_step(self, data, _):
-        loss = self.compute_loss(data)
+        loss, _, _, _, _ = self.compute_statistics(data, training=True)
         self.log("loss", loss)
         return {"loss": loss}
 
@@ -109,12 +125,25 @@ class MLPLightning(pl.LightningModule):
         return torch.optim.Adam(self.model.parameters(), lr=self.learning_rate)
 
     def validation_step(self, data, _):
-        val_loss = self.compute_loss(data)
+        (val_loss, mae, rmse, pearson_correlation,
+         spearman_correlation) = self.compute_statistics(data, training=False)
         self.log("val_loss",
                  val_loss,
                  on_step=False,
                  on_epoch=True,
                  prog_bar=True)
+        self.log("val_mae", mae, on_step=False, on_epoch=True, prog_bar=False)
+        self.log("val_rmse", rmse, on_step=False, on_epoch=True, prog_bar=False)
+        self.log("val_pearson",
+                 pearson_correlation,
+                 on_step=False,
+                 on_epoch=True,
+                 prog_bar=False)
+        self.log("val_spearman",
+                 spearman_correlation,
+                 on_step=False,
+                 on_epoch=True,
+                 prog_bar=False)
         return {"val_loss": val_loss}
 
     def validation_epoch_end(self, outputs):
