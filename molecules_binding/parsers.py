@@ -40,12 +40,12 @@ def read_dataset(directory, ligand_file_extention, protein_file_extention):
     """
     assert ligand_file_extention in ("sdf", "mol2")
     assert protein_file_extention in ("protein", "pocket")
-    pdb_files = []
-    for filename in os.listdir(directory):
-        if len(filename) == 4:
-            f = os.path.join(directory, filename)
-            files = os.listdir(f)
-            pdb_id = filename
+    molecules_files = []
+    for folder_name in os.listdir(directory):
+        if len(folder_name) == 4:
+            folder_dir = os.path.join(directory, folder_name)
+            files = os.listdir(folder_dir)
+            compound_id = folder_name
 
             for file in files:
                 if file.endswith(protein_file_extention + ".pdb"):
@@ -53,10 +53,11 @@ def read_dataset(directory, ligand_file_extention, protein_file_extention):
                 elif file.endswith("ligand." + ligand_file_extention):
                     file_ligand = file
 
-            pdb_files += [(pdb_id, os.path.join(f, file_protein),
-                           os.path.join(f, file_ligand))]
+            molecules_files += [(compound_id,
+                                 os.path.join(folder_dir, file_protein),
+                                 os.path.join(folder_dir, file_ligand))]
 
-    return pdb_files
+    return molecules_files
 
 
 ele2num = {
