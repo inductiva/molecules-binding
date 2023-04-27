@@ -3,7 +3,12 @@ Lightning Code
 """
 import torch
 import pytorch_lightning as pl
-from scipy.stats import pearsonr, spearmanr
+from torchmetrics import SpearmanCorrCoef
+from torchmetrics import PearsonCorrCoef
+from torch.nn.functional import l1_loss
+
+spearman = SpearmanCorrCoef(num_outputs=1)
+pearson = PearsonCorrCoef(num_outputs=1)
 
 
 class GraphNNLightning(pl.LightningModule):
@@ -21,17 +26,18 @@ class GraphNNLightning(pl.LightningModule):
         self.criterion = torch.nn.MSELoss()
 
     def compute_statistics(self, data, training):
-        labels = data.y.unsqueeze(1)
-        outputs = self.model(data, data.batch, self.dropout_rate)
+        labels = data.y
+        outputs = self.model(data, data.batch, self.dropout_rate).squeeze()
+
         if training:
             loss = self.criterion(labels, outputs)
             return loss, None, None, None, None
+
         loss = self.criterion(labels, outputs)
-        mae = torch.nn.functional.l1_loss(outputs, labels)
-        rmse = torch.sqrt(torch.nn.functional.mse_loss(outputs, labels))
-        pearson_correlation = pearsonr(outputs.cpu().squeeze(),
-                                       labels.cpu().squeeze())[0]
-        spearman_correlation = spearmanr(outputs.cpu(), labels.cpu())[0]
+        mae = l1_loss(outputs, labels)
+        rmse = torch.sqrt(loss)
+        pearson_correlation = pearson(outputs.cpu(), labels.cpu())
+        spearman_correlation = spearman(outputs, labels)
         return loss, mae, rmse, pearson_correlation, spearman_correlation
 
     def training_step(self, data, _):
@@ -77,10 +83,6 @@ class GraphNNLightning(pl.LightningModule):
                  batch_size=self.batch_size)
         return {"val_loss": val_loss}
 
-    def validation_epoch_end(self, outputs):
-        avg_loss = torch.stack([x["val_loss"] for x in outputs]).mean()
-        return {"val_loss": avg_loss}
-
 
 class MLPLightning(pl.LightningModule):
     """
@@ -96,17 +98,18 @@ class MLPLightning(pl.LightningModule):
     def compute_statistics(self, data, training):
         inputs, labels = data
         inputs = inputs.double()
-        labels = torch.unsqueeze(labels, -1).double()
-        outputs = self.model(inputs)
+        labels = labels.double()
+        outputs = self.model(inputs).squeeze()
+
         if training:
             loss = self.criterion(labels, outputs)
             return loss, None, None, None, None
+
         loss = self.criterion(labels, outputs)
-        mae = torch.nn.functional.l1_loss(outputs, labels)
-        rmse = torch.sqrt(torch.nn.functional.mse_loss(outputs, labels))
-        pearson_correlation = pearsonr(outputs.cpu().squeeze(),
-                                       labels.cpu().squeeze())[0]
-        spearman_correlation = spearmanr(outputs.cpu(), labels.cpu())[0]
+        mae = l1_loss(outputs, labels)
+        rmse = torch.sqrt(loss)
+        pearson_correlation = pearson(outputs.cpu(), labels.cpu())
+        spearman_correlation = spearman(outputs, labels)
         return loss, mae, rmse, pearson_correlation, spearman_correlation
 
     def training_step(self, data, _):
@@ -138,7 +141,3 @@ class MLPLightning(pl.LightningModule):
                  on_epoch=True,
                  prog_bar=False)
         return {"val_loss": val_loss}
-
-    def validation_epoch_end(self, outputs):
-        avg_loss = torch.stack([x["val_loss"] for x in outputs]).mean()
-        return {"val_loss": avg_loss}
