@@ -80,7 +80,10 @@ def main(_):
                         dropout_rate=FLAGS.dropout_rate,
                         num_hidden_graph=FLAGS.num_hidden_graph,
                         num_hidden_linear=FLAGS.num_hidden_linear,
-                        comment=FLAGS.add_comment)
+                        comment=FLAGS.add_comment,
+                        data_split=FLAGS.train_perc,
+                        num_node_features=dataset[0].num_node_features,
+                        num_edge_features=dataset[0].num_edge_features)
         run_id = mlflow.active_run().info.run_id
         loss_callback = LossMonitor(run_id)
         metrics_callback = MetricsMonitor(run_id)
