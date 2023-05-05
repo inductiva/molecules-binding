@@ -7,6 +7,7 @@ from molecules_binding.callbacks import LossMonitor, MetricsMonitor
 from molecules_binding.lightning_wrapper import GraphNNLightning
 from torch_geometric.loader import DataLoader
 from pytorch_lightning import Trainer
+from pytorch_lightning.callbacks import EarlyStopping
 from absl import flags
 from absl import app
 import mlflow
@@ -35,6 +36,9 @@ flags.DEFINE_integer("num_cpus_per_worker", 1,
                      "The number of cpus for each worker.")
 flags.DEFINE_string("mlflow_server_uri", None,
                     "Tracking uri for mlflow experiments.")
+flags.DEFINE_integer(
+    "early_stopping_patience", 100,
+    "How many epochs to wait for improvement before stopping.")
 
 
 def _log_parameters(**kwargs):
@@ -83,11 +87,18 @@ def main(_):
                         comment=FLAGS.add_comment,
                         data_split=FLAGS.train_perc,
                         num_node_features=dataset[0].num_node_features,
-                        num_edge_features=dataset[0].num_edge_features)
+                        num_edge_features=dataset[0].num_edge_features,
+                        early_stopping_patience=FLAGS.early_stopping_patience)
         run_id = mlflow.active_run().info.run_id
         loss_callback = LossMonitor(run_id)
         metrics_callback = MetricsMonitor(run_id)
-        callbacks = [loss_callback, metrics_callback]
+        # Early stopping.
+        early_stopping_callback = EarlyStopping(
+            monitor="val_loss",
+            min_delta=0,
+            patience=FLAGS.early_stopping_patience,
+            mode="min")
+        callbacks = [loss_callback, metrics_callback, early_stopping_callback]
 
     if FLAGS.use_ray:
         ray.init()
