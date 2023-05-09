@@ -45,6 +45,10 @@ class GraphNNLightning(pl.LightningModule):
         self.log("loss", loss, batch_size=self.batch_size)
         return {"loss": loss}
 
+    def training_epoch_end(self, outputs):
+        avg_loss = torch.stack([x["loss"] for x in outputs]).mean()
+        self.log("loss", avg_loss, batch_size=self.batch_size)
+
     def configure_optimizers(self):
         return torch.optim.Adam(self.model.parameters(), lr=self.learning_rate)
 
