@@ -88,7 +88,8 @@ def main(_):
                         data_split=FLAGS.train_perc,
                         num_node_features=dataset[0].num_node_features,
                         num_edge_features=dataset[0].num_edge_features,
-                        early_stopping_patience=FLAGS.early_stopping_patience)
+                        early_stopping_patience=FLAGS.early_stopping_patience,
+                        dataset_size=len(dataset))
         run_id = mlflow.active_run().info.run_id
         loss_callback = LossMonitor(run_id)
         metrics_callback = MetricsMonitor(run_id)

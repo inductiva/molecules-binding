@@ -4,7 +4,6 @@ Define models
 from torch import nn
 import torch.nn.functional as F
 from torch_geometric.nn import GATConv
-from torch_geometric.nn import MessagePassing
 from torch_geometric.nn import global_mean_pool
 
 
@@ -28,7 +27,7 @@ class MLP(nn.Module):
         return x
 
 
-class GraphNN(MessagePassing):
+class GraphNN(nn.Module):
     """
         Graph Convolution Neural Network
     """
@@ -40,7 +39,7 @@ class GraphNN(MessagePassing):
             hidden_channels (int): Number of features for each node
             num_node_features (int): Initial number of node features
         """
-        super().__init__(aggr='add')
+        super().__init__()
 
         graph_layer_sizes = [num_node_features] + layer_sizes_graph
         graph_layers = []
