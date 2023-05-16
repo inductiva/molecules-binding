@@ -106,8 +106,7 @@ def molecule_info(path, type_mol, num_atoms_ligand):
     elif type_mol == "Ligand":
 
         if path[-4:] == ".sdf":
-            suplier = Chem.SDMolSupplier(path, sanitize=False,
-                                          removeHs=False)
+            suplier = Chem.SDMolSupplier(path, sanitize=False, removeHs=False)
             molecule = next(suplier)
         elif path[-4:] == "mol2":
             molecule = Chem.MolFromMol2File(path,
