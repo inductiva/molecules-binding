@@ -121,6 +121,10 @@ class MLPLightning(pl.LightningModule):
         self.log("loss", loss)
         return {"loss": loss}
 
+    def training_epoch_end(self, outputs):
+        avg_loss = torch.stack([x["loss"] for x in outputs]).mean()
+        self.log("loss", avg_loss)
+
     def configure_optimizers(self):
         return torch.optim.Adam(self.model.parameters(), lr=self.learning_rate)
 

@@ -39,7 +39,7 @@ def read_dataset(directory, ligand_file_extention, protein_file_extention):
     - abcd_ligand.mol2
     """
     assert ligand_file_extention in ("sdf", "mol2")
-    assert protein_file_extention in ("protein", "pocket")
+    assert protein_file_extention in ("protein", "pocket", "processed")
     molecules_files = []
     for folder_name in os.listdir(directory):
         if len(folder_name) == 4:
@@ -106,8 +106,9 @@ def molecule_info(path, type_mol, num_atoms_ligand):
     elif type_mol == "Ligand":
 
         if path[-4:] == ".sdf":
-            molecule = Chem.SDMolSupplier(path, sanitize=False,
-                                          removeHs=False)[0]
+            suplier = Chem.SDMolSupplier(path, sanitize=False,
+                                          removeHs=False)
+            molecule = next(suplier)
         elif path[-4:] == "mol2":
             molecule = Chem.MolFromMol2File(path,
                                             sanitize=False,
@@ -125,15 +126,15 @@ def molecule_info(path, type_mol, num_atoms_ligand):
     for atom in molecule.GetAtoms():
         atom_symbol = atom.GetSymbol()
         onehot_elem = np.zeros(num_atom_types)
-        onehot_elem[ele2num[atom_symbol]] = 1
+        onehot_elem[ele2num.get(atom_symbol, 8)] = 1
 
-        onehot_total_valence = np.zeros(8)
+        onehot_total_valence = np.zeros(9)
         onehot_total_valence[atom.GetTotalValence()] = 1
 
-        onehot_explicit_valence = np.zeros(8)
+        onehot_explicit_valence = np.zeros(9)
         onehot_explicit_valence[atom.GetExplicitValence()] = 1
 
-        onehot_implicit_valence = np.zeros(4)
+        onehot_implicit_valence = np.zeros(5)
         onehot_implicit_valence[atom.GetImplicitValence()] = 1
 
         van_der_waals_radius = pt.GetRvdw(atom_symbol)

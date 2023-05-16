@@ -30,7 +30,8 @@ flags.DEFINE_enum("which_file_ligand", "sdf", ["sdf", "mol2"],
 flags.DEFINE_enum("which_model", "graphnet", ["graphnet", "mlp"],
                   "choose the model")
 
-flags.DEFINE_enum("which_file_protein", "pocket", ["pocket", "protein"],
+flags.DEFINE_enum("which_file_protein", "pocket",
+                  ["pocket", "protein", "processed"],
                   "can choose either the entire protein or just the pocket")
 
 

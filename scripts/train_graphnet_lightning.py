@@ -13,6 +13,7 @@ from absl import app
 import mlflow
 from ray_lightning import RayStrategy
 import ray
+import random
 
 FLAGS = flags.FLAGS
 
@@ -29,7 +30,7 @@ flags.DEFINE_integer("batch_size", 32, "batch size")
 flags.DEFINE_integer("max_epochs", 300, "number of epochs")
 flags.DEFINE_integer("num_workers", 3, "number of workers")
 flags.DEFINE_boolean("use_gpu", True, "True if using gpu, False if not")
-flags.DEFINE_string("add_comment", None, "Add a comment to the experiment.")
+flags.DEFINE_string("comment", None, "Add a comment to the experiment.")
 # Flags for Ray Training
 flags.DEFINE_boolean("use_ray", False, "Controls if it uses ray")
 flags.DEFINE_integer("num_cpus_per_worker", 1,
@@ -39,6 +40,7 @@ flags.DEFINE_string("mlflow_server_uri", None,
 flags.DEFINE_integer(
     "early_stopping_patience", 100,
     "How many epochs to wait for improvement before stopping.")
+flags.DEFINE_boolean("shuffle", False, "Sanity Check: Shuffle labels")
 
 
 def _log_parameters(**kwargs):
@@ -50,6 +52,17 @@ def main(_):
     dataset = torch.load(FLAGS.path_dataset)
     train_size = int(FLAGS.train_perc * len(dataset))
     test_size = len(dataset) - train_size
+
+    # Sanity Check : Shuffling labels
+    if FLAGS.shuffle:
+        random.seed(42)
+        labels = [data.y for data in dataset]
+        labels_shuffled = labels.copy()
+        random.shuffle(labels_shuffled)
+
+        for i in range(len(dataset)):
+            dataset[i].y = labels_shuffled[i]
+
     train_dataset, val_dataset = torch.utils.data.random_split(
         dataset, [train_size, test_size],
         generator=torch.Generator().manual_seed(42))
@@ -84,7 +97,7 @@ def main(_):
                         dropout_rate=FLAGS.dropout_rate,
                         num_hidden_graph=FLAGS.num_hidden_graph,
                         num_hidden_linear=FLAGS.num_hidden_linear,
-                        comment=FLAGS.add_comment,
+                        comment=FLAGS.comment,
                         data_split=FLAGS.train_perc,
                         num_node_features=dataset[0].num_node_features,
                         num_edge_features=dataset[0].num_edge_features,
@@ -110,7 +123,8 @@ def main(_):
         trainer = Trainer(max_epochs=FLAGS.max_epochs,
                           strategy=plugin,
                           logger=False,
-                          callbacks=callbacks)
+                          callbacks=callbacks,
+                          log_every_n_steps=20)
     else:
         accelerator = "gpu" if FLAGS.use_gpu else None
         trainer = Trainer(max_epochs=FLAGS.max_epochs,
