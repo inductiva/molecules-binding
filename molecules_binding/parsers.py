@@ -60,6 +60,15 @@ def read_dataset(directory, ligand_file_extention, protein_file_extention):
     return molecules_files
 
 
+def set_of_complexes(directory):
+    """creates a set with the complexes name (4 letters)"""
+    complexes_set = set()
+    for folder_name in os.listdir(directory):
+        if len(folder_name) == 4:
+            complexes_set.add(folder_name)
+    return complexes_set
+
+
 ele2num = {
     "H": 0,
     "O": 1,
