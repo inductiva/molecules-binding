@@ -23,6 +23,7 @@ flags.mark_flag_as_required("path_dataset")
 flags.DEFINE_float("learning_rate", 0.001, "learning rate")
 flags.DEFINE_float("dropout_rate", 0.3, "Dropout rate")
 flags.DEFINE_float("train_perc", 0.9, "percentage of train-validation-split")
+flags.DEFINE_integer("splitting_seed", 42, "Seed for splitting dataset")
 flags.DEFINE_list("num_hidden_graph", [64, 96, 128],
                   "size of message passing layers")
 flags.DEFINE_list("num_hidden_linear", [], "size of linear layers")
@@ -41,6 +42,7 @@ flags.DEFINE_integer(
     "early_stopping_patience", 100,
     "How many epochs to wait for improvement before stopping.")
 flags.DEFINE_boolean("shuffle", False, "Sanity Check: Shuffle labels")
+flags.DEFINE_integer("shuffling_seed", 42, "Seed for shuffling labels")
 
 
 def _log_parameters(**kwargs):
@@ -55,7 +57,7 @@ def main(_):
 
     # Sanity Check : Shuffling labels
     if FLAGS.shuffle:
-        random.seed(42)
+        random.seed(FLAGS.shuffling_seed)
         labels = [data.y for data in dataset]
         labels_shuffled = labels.copy()
         random.shuffle(labels_shuffled)
@@ -65,7 +67,7 @@ def main(_):
 
     train_dataset, val_dataset = torch.utils.data.random_split(
         dataset, [train_size, test_size],
-        generator=torch.Generator().manual_seed(42))
+        generator=torch.Generator().manual_seed(FLAGS.splitting_seed))
 
     train_loader = DataLoader(train_dataset,
                               batch_size=FLAGS.batch_size,
