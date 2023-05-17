@@ -148,18 +148,18 @@ class VectorDataset(torch.utils.data.Dataset):
         return self.dataset_len
 
     def __getitem__(self, index):
-        coords_p, coords_l, affinity = self.data[index]
+        protein, ligand, affinity = self.data[index]
 
-        coords_p = torch.nn.functional.pad(
-            coords_p, (0, 0, 0, self.max_len_p - coords_p.shape[0]),
+        protein = torch.nn.functional.pad(
+            protein, (0, 0, 0, self.max_len_p - protein.shape[0]),
             mode="constant",
             value=None)
 
-        coords_l = torch.nn.functional.pad(
-            coords_l, (0, 0, 0, self.max_len_l - coords_l.shape[0]),
+        ligand = torch.nn.functional.pad(
+            ligand, (0, 0, 0, self.max_len_l - ligand.shape[0]),
             mode="constant",
             value=None)
 
         return torch.flatten(
-            torch.cat((coords_p,coords_l), dim = 0).float()), \
+            torch.cat((protein,ligand), dim = 0).float()), \
             np.float64(affinity)

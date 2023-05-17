@@ -6,6 +6,7 @@ from molecules_binding.models import MLP
 from molecules_binding.callbacks import LossMonitor, MetricsMonitor
 from molecules_binding.lightning_wrapper import MLPLightning
 from pytorch_lightning import Trainer
+from pytorch_lightning.callbacks import EarlyStopping
 from absl import flags
 from absl import app
 import mlflow
@@ -27,6 +28,9 @@ flags.DEFINE_bool("use_gpu", True, "True if using gpu, False if not")
 flags.DEFINE_string("add_comment", None, "Add a comment to the experiment.")
 flags.DEFINE_string("mlflow_server_uri", None,
                     "Tracking uri for mlflow experiments.")
+flags.DEFINE_integer(
+    "early_stopping_patience", 100,
+    "How many epochs to wait for improvement before stopping.")
 
 
 def _log_parameters(**kwargs):
@@ -70,16 +74,24 @@ def main(_):
                         num_hidden=FLAGS.num_hidden,
                         comment=FLAGS.add_comment,
                         first_layer_size=len(dataset[0][0]),
+                        early_stopping_patience=FLAGS.early_stopping_patience,
                         data_split=FLAGS.train_perc)
         run_id = mlflow.active_run().info.run_id
         loss_callback = LossMonitor(run_id)
         metrics_callback = MetricsMonitor(run_id)
-        callbacks = [loss_callback, metrics_callback]
+        # Early stopping.
+        early_stopping_callback = EarlyStopping(
+            monitor="val_loss",
+            min_delta=0,
+            patience=FLAGS.early_stopping_patience,
+            mode="min")
+        callbacks = [loss_callback, metrics_callback, early_stopping_callback]
 
     trainer = Trainer(max_epochs=FLAGS.max_epochs,
                       accelerator="gpu" if FLAGS.use_gpu else None,
                       devices=1,
-                      callbacks=callbacks)
+                      callbacks=callbacks,
+                      log_every_n_steps=15)
     trainer.fit(model=lightning_model,
                 train_dataloaders=train_loader,
                 val_dataloaders=val_loader)
