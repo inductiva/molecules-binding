@@ -40,7 +40,7 @@ def create_edges_protein_ligand(num_atoms_ligand, num_atoms_protein,
 class GraphDataset(Dataset):
     """ builds the graph for each complex"""
 
-    def __init__(self, pdb_files, aff_d, threshold):
+    def __init__(self, pdb_files, threshold):
         """
         Args:
             pdb_files: list with triplets containing
@@ -55,7 +55,7 @@ class GraphDataset(Dataset):
 
         data_list = []
 
-        for comp_name, path_protein, path_ligand in pdb_files:
+        for _, path_protein, path_ligand, affinity in pdb_files:
 
             (ligand_coord, atoms_ligand, edges_ligand, edges_length_ligand,
              num_atoms_ligand) = molecule_info(path_ligand, "Ligand", 0)
@@ -89,7 +89,7 @@ class GraphDataset(Dataset):
                      edge_index=edges,
                      pos=coords,
                      edge_attr=edges_atrr,
-                     y=torch.as_tensor(np.float64(aff_d[comp_name][1])))
+                     y=torch.as_tensor(np.float64(affinity)))
             ]
 
         self.data_list = data_list
@@ -106,7 +106,7 @@ class VectorDataset(torch.utils.data.Dataset):
     """ constructs a vector with coordinates padded and flatten
     (both the ligand and protein) and one-hot chemical element"""
 
-    def __init__(self, pdb_files, aff_dict):
+    def __init__(self, pdb_files):
         """
         Args:
             pdb_files: list with triplets containing
@@ -123,7 +123,7 @@ class VectorDataset(torch.utils.data.Dataset):
 
         data = []
 
-        for comp_name, path_protein, path_ligand in pdb_files:
+        for _, path_protein, path_ligand, affinity in pdb_files:
 
             (ligand_coord, atoms_ligand, _, _,
              num_atoms_ligand) = molecule_info(path_ligand, "Ligand", 0)
@@ -138,7 +138,7 @@ class VectorDataset(torch.utils.data.Dataset):
             data += [(torch.cat((torch.as_tensor(ligand_coord), atoms_ligand),
                                 dim=1),
                       torch.cat((torch.as_tensor(protein_coord), atoms_protein),
-                                dim=1), aff_dict[comp_name][1])]
+                                dim=1), affinity)]
 
         self.data = data
         self.max_len_p = max_len_p

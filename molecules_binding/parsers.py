@@ -60,10 +60,11 @@ def read_dataset(directory, ligand_file_extention, protein_file_extention,
                     file_ligand = file
             if aff_dict[compound_id][4]:
                 # only add molecule if affinity is not uncertain
-                molecules_files += [(compound_id,
-                                     os.path.join(folder_dir, file_protein),
-                                     os.path.join(folder_dir, file_ligand))]
-
+                molecules_files += [
+                    (compound_id, os.path.join(folder_dir, file_protein),
+                     os.path.join(folder_dir,
+                                  file_ligand), aff_dict[compound_id][1])
+                ]
     return molecules_files
 
 
