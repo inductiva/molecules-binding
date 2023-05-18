@@ -12,11 +12,14 @@ def get_affinities(affinity_directory):
     affinity_dict = {}
     with open(affinity_directory, "r", encoding="utf-8") as f:
         for line in f:
+            aff_not_uncertain = True
             if line[0] != "#":
                 fields = line.split()
                 pdb_id = fields[0]
                 log_aff = float(fields[3])
                 aff_str = fields[4]
+                if "<" in aff_str or ">" in aff_str or "~" in aff_str:
+                    aff_not_uncertain = False
                 aff_tokens = re.split("[=<>~]+", aff_str)
                 assert len(aff_tokens) == 2
                 label, aff_and_unity = aff_tokens
@@ -24,11 +27,14 @@ def get_affinities(affinity_directory):
                 affinity_value = float(aff_and_unity[:-2])
                 aff_unity = aff_and_unity[-2:]
                 aff = float(affinity_value)
-                affinity_dict[pdb_id] = [label, log_aff, aff, aff_unity]
+                affinity_dict[pdb_id] = [
+                    label, log_aff, aff, aff_unity, aff_not_uncertain
+                ]
     return affinity_dict
 
 
-def read_dataset(directory, ligand_file_extention, protein_file_extention):
+def read_dataset(directory, ligand_file_extention, protein_file_extention,
+                 aff_dict):
     """
     from directory returns a list of pdb_id, path to protein, path to ligand
     The directory contains compound folders (each has an ID with 4 letters,
@@ -52,12 +58,23 @@ def read_dataset(directory, ligand_file_extention, protein_file_extention):
                     file_protein = file
                 elif file.endswith("ligand." + ligand_file_extention):
                     file_ligand = file
-
-            molecules_files += [(compound_id,
-                                 os.path.join(folder_dir, file_protein),
-                                 os.path.join(folder_dir, file_ligand))]
-
+            if aff_dict[compound_id][4]:
+                # only add molecule if affinity is not uncertain
+                molecules_files += [
+                    (compound_id, os.path.join(folder_dir, file_protein),
+                     os.path.join(folder_dir,
+                                  file_ligand), aff_dict[compound_id][1])
+                ]
     return molecules_files
+
+
+def set_of_complexes(directory):
+    """creates a set with the complexes name (4 letters)"""
+    complexes_set = set()
+    for folder_name in os.listdir(directory):
+        if len(folder_name) == 4:
+            complexes_set.add(folder_name)
+    return complexes_set
 
 
 ele2num = {

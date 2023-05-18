@@ -4,7 +4,7 @@ Create class dataset from refinedset
 import torch
 from molecules_binding.datasets import GraphDataset
 from molecules_binding.datasets import VectorDataset
-from molecules_binding.parsers import read_dataset, get_affinities
+from molecules_binding.parsers import read_dataset, get_affinities, set_of_complexes
 from absl import flags
 from absl import app
 
@@ -16,6 +16,9 @@ flags.mark_flag_as_required("affinity_dir")
 
 flags.DEFINE_string("data_dir", None, "specify the path to the dataset")
 flags.mark_flag_as_required("data_dir")
+
+flags.DEFINE_string("data_dir_not_include", None,
+                    "path to a dataset to exlude (for example core set)")
 
 flags.DEFINE_string("path_dataset", None,
                     "specify the path to the stored processed dataset")
@@ -35,24 +38,39 @@ flags.DEFINE_enum("which_file_protein", "pocket",
                   "can choose either the entire protein or just the pocket")
 
 
-def create_dataset(direct: str, affinity_dir: str, path: str, threshold: float,
-                   which_model: str, which_file_ligand: str,
-                   which_file_protein: str):
-    pdb_files = read_dataset(direct, which_file_ligand, which_file_protein)
+def create_dataset(direct: str,
+                   affinity_dir: str,
+                   path: str,
+                   threshold: float,
+                   which_model: str,
+                   which_file_ligand: str,
+                   which_file_protein: str,
+                   data_dir_not_include: str = None):
+
     affinity_dict = get_affinities(affinity_dir)
 
+    pdb_files = read_dataset(direct, which_file_ligand, which_file_protein,
+                             affinity_dict)
+
+    if data_dir_not_include is not None:
+        pdb_files_not_include = set_of_complexes(data_dir_not_include)
+        pdb_files = [
+            pdb_file for pdb_file in pdb_files
+            if pdb_file[0] not in pdb_files_not_include
+        ]
+
     if which_model == "graphnet":
-        datasetg = GraphDataset(pdb_files, affinity_dict, threshold)
+        datasetg = GraphDataset(pdb_files, threshold)
         torch.save(datasetg, path)
     elif which_model == "mlp":
-        datasetv = VectorDataset(pdb_files, affinity_dict)
+        datasetv = VectorDataset(pdb_files)
         torch.save(datasetv, path)
 
 
 def main(_):
     create_dataset(FLAGS.data_dir, FLAGS.affinity_dir, FLAGS.path_dataset,
                    FLAGS.threshold, FLAGS.which_model, FLAGS.which_file_ligand,
-                   FLAGS.which_file_protein)
+                   FLAGS.which_file_protein, FLAGS.data_dir_not_include)
 
 
 if __name__ == "__main__":
