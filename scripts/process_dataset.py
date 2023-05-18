@@ -47,7 +47,10 @@ def create_dataset(direct: str,
                    which_file_protein: str,
                    data_dir_not_include: str = None):
 
-    pdb_files = read_dataset(direct, which_file_ligand, which_file_protein)
+    affinity_dict = get_affinities(affinity_dir)
+
+    pdb_files = read_dataset(direct, which_file_ligand, which_file_protein,
+                             affinity_dict)
 
     if data_dir_not_include is not None:
         pdb_files_not_include = set_of_complexes(data_dir_not_include)
@@ -55,8 +58,6 @@ def create_dataset(direct: str,
             pdb_file for pdb_file in pdb_files
             if pdb_file[0] not in pdb_files_not_include
         ]
-
-    affinity_dict = get_affinities(affinity_dir)
 
     if which_model == "graphnet":
         datasetg = GraphDataset(pdb_files, affinity_dict, threshold)
