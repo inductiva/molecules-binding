@@ -65,8 +65,8 @@ def create_edges_protein_ligand(num_atoms_ligand, num_atoms_protein,
             distances = []
             for neighbor in neighbors:
                 angle, area, distance = structural_info(coords[edge_begin],
-                                                coords[edge_end],
-                                                coords[neighbor])
+                                                        coords[edge_end],
+                                                        coords[neighbor])
                 angles.append(angle)
                 areas.append(area)
                 distances.append(distance)
@@ -167,8 +167,8 @@ class GraphDataset(Dataset):
 
         print(correctly_parsed)
         print(not_correctly_parsed)
-        print("Parsed {} complexes".format(len(correctly_parsed)))
-        print("Not parsed {} complexes".format(len(not_correctly_parsed)))
+        print(f"Parsed {len(correctly_parsed)} complexes")
+        print(f"Not parsed {len(not_correctly_parsed)} complexes")
         self.data_list = data_list
         self.dataset_len = len(data_list)
 
@@ -178,3 +178,90 @@ class GraphDataset(Dataset):
 
     def __getitem__(self, index):
         return self.data_list[index]
+
+
+class VectorDataset(torch.utils.data.Dataset):
+    """ constructs a vector with coordinates padded and flatten
+    (both the ligand and protein) and one-hot chemical element"""
+
+    def __init__(self, pdb_files):
+        """
+        Args:
+            pdb_files: list with triplets containing
+                name of compound (4 letters)
+                path to pdb file describing protein
+                path to sdf file describing ligand
+            aff_dict: dictionary that for each complex returns affinity data
+        """
+
+        max_len_p = 0
+        max_len_l = 0
+
+        data = []
+        not_correctly_parsed = set()
+        correctly_parsed = set()
+        i = 0
+
+        for pdb_id, path_protein, path_ligand, affinity in pdb_files:
+            i += 1
+            print(pdb_id, i)
+
+            (ligand_coord, atoms_ligand, _, _,
+             num_atoms_ligand) = molecule_info(path_ligand, "Ligand", 0)
+
+            if ligand_coord is None:
+                not_correctly_parsed.add(pdb_id)
+                continue
+
+            else:
+
+                (protein_coord, atoms_protein, _, _,
+                 num_atoms_protein) = molecule_info(path_protein, "Protein",
+                                                    num_atoms_ligand)
+
+                if protein_coord is None:
+                    not_correctly_parsed.add(pdb_id)
+                    continue
+
+                else:
+                    correctly_parsed.add(pdb_id)
+                    max_len_l = max(max_len_l, num_atoms_ligand)
+                    max_len_p = max(max_len_p, num_atoms_protein)
+
+                    data += [
+                        (torch.cat(
+                            (torch.as_tensor(ligand_coord), atoms_ligand),
+                            dim=1),
+                         torch.cat(
+                             (torch.as_tensor(protein_coord), atoms_protein),
+                             dim=1), affinity)
+                    ]
+
+        self.dataset_len = len(data)
+        print(correctly_parsed)
+        print(not_correctly_parsed)
+        print(f"Parsed {len(correctly_parsed)} complexes")
+        print(f"Not parsed {len(not_correctly_parsed)} complexes")
+        self.data = data
+        self.max_len_p = max_len_p
+        self.max_len_l = max_len_l
+
+    def __len__(self):
+        return self.dataset_len
+
+    def __getitem__(self, index):
+        protein, ligand, affinity = self.data[index]
+
+        protein = torch.nn.functional.pad(
+            protein, (0, 0, 0, self.max_len_p - protein.shape[0]),
+            mode="constant",
+            value=None)
+
+        ligand = torch.nn.functional.pad(
+            ligand, (0, 0, 0, self.max_len_l - ligand.shape[0]),
+            mode="constant",
+            value=None)
+
+        return torch.flatten(
+            torch.cat((protein,ligand), dim = 0).float()), \
+            np.float64(affinity)

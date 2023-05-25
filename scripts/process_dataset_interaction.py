@@ -2,7 +2,7 @@
 Create class dataset from refinedset
 """
 import torch
-from molecules_binding.datasets_interaction import GraphDataset
+from molecules_binding.datasets_interaction import GraphDataset, VectorDataset
 from molecules_binding.parsers import read_dataset, get_affinities, CASF_2016_core_set
 from absl import flags
 from absl import app
@@ -55,9 +55,9 @@ def create_dataset(direct: str, affinity_dir: str, path: str, threshold: float,
     if which_model == "graphnet":
         datasetg = GraphDataset(pdb_files, threshold)
         torch.save(datasetg, path)
-    # elif which_model == "mlp":
-    #     datasetv = VectorDataset(pdb_files)
-    #     torch.save(datasetv, path)
+    elif which_model == "mlp":
+        datasetv = VectorDataset(pdb_files)
+        torch.save(datasetv, path)
 
 
 def main(_):
