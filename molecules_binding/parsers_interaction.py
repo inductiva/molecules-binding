@@ -43,8 +43,8 @@ bond2num = {
     Chem.rdchem.BondType.DOUBLE: 1,
     Chem.rdchem.BondType.TRIPLE: 2,
     Chem.rdchem.BondType.AROMATIC: 3,
-    Chem.rdchem.BondType.UNSPECIFIED: 4,  # not ideal
-    Chem.rdchem.BondType.ZERO: 4  #not ideal
+    Chem.rdchem.BondType.UNSPECIFIED: 4,
+    Chem.rdchem.BondType.ZERO: 4
 }
 
 stereo2num = {

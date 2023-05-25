@@ -1,5 +1,9 @@
 """
-Define class Dataset (replicating Interaction Net)
+Define class Dataset (replicating Jiang, Dejun, et al. "Interactiongraphnet:
+A novel and efficient deep graph representation learning framework for
+accurate protein–ligand interaction predictions." Journal of medicinal
+chemistry 64.24 (2021): 18209-18232.)
+https://pubs.acs.org/doi/10.1021/acs.jmedchem.1c01830
 """
 from torch_geometric.data import Data, Dataset
 import numpy as np
@@ -8,6 +12,15 @@ from molecules_binding.parsers_interaction import molecule_info
 
 
 def structural_info(a, b, c):
+    """
+    Args:
+        a, b, c: numpy arrays representing coordinates of 3 points
+    Returns:
+        angle between the vectors ab and ac
+        area of the triangle abc
+        distance between a and c
+    """
+
     ab = b - a
     ac = c - a
     cosine_angle = np.dot(ab, ac) / (np.linalg.norm(ab) * np.linalg.norm(ac))
@@ -70,6 +83,8 @@ def create_edges_protein_ligand(num_atoms_ligand, num_atoms_protein,
                 angles.append(angle)
                 areas.append(area)
                 distances.append(distance)
+            # normalizing values to be in the same order of magnitude
+            # (done in the original paper)
             angle_info = [
                 np.max(angles) * 0.01,
                 np.sum(angles) * 0.01,
@@ -114,16 +129,14 @@ class GraphDataset(Dataset):
         data_list = []
         correctly_parsed = set()
         not_correctly_parsed = set()
-        i = 0
-        for pdb_id, path_protein, path_ligand, affinity in pdb_files:
-            i += 1
-            print(pdb_id, i)
+        for (i, (pdb_id, path_protein, path_ligand,
+                 affinity)) in enumerate(pdb_files):
+            print(i, pdb_id)
             (ligand_coord, atoms_ligand, edges_ligand, edges_length_ligand,
              num_atoms_ligand) = molecule_info(path_ligand, "Ligand", 0)
 
             if ligand_coord is None:
                 not_correctly_parsed.add(pdb_id)
-                continue
 
             else:
                 (protein_coord, atoms_protein, edges_protein,
@@ -133,10 +146,18 @@ class GraphDataset(Dataset):
 
                 if protein_coord is None:
                     not_correctly_parsed.add(pdb_id)
-                    continue
 
                 else:
                     correctly_parsed.add(pdb_id)
+
+                    # Two types of edges:
+                    # edges representing chemical bonds, and the features of
+                    # those edges are [chemical features(...), 0,0,...,0]
+                    # edges joining the ligand molecule with the protein
+                    # molecule, and those edges have features
+                    # [0,..,0, 3-dimensional features]
+
+
                     edges_both, edges_dis_both = create_edges_protein_ligand(
                         num_atoms_ligand, num_atoms_protein, ligand_coord,
                         protein_coord, threshold)
@@ -173,7 +194,6 @@ class GraphDataset(Dataset):
         self.dataset_len = len(data_list)
 
     def __len__(self):
-        # return len(self.data_list)
         return self.dataset_len
 
     def __getitem__(self, index):
@@ -200,18 +220,16 @@ class VectorDataset(torch.utils.data.Dataset):
         data = []
         not_correctly_parsed = set()
         correctly_parsed = set()
-        i = 0
 
-        for pdb_id, path_protein, path_ligand, affinity in pdb_files:
-            i += 1
-            print(pdb_id, i)
+        for (i, (pdb_id, path_protein, path_ligand,
+                 affinity)) in enumerate(pdb_files):
+            print(i, pdb_id)
 
             (ligand_coord, atoms_ligand, _, _,
              num_atoms_ligand) = molecule_info(path_ligand, "Ligand", 0)
 
             if ligand_coord is None:
                 not_correctly_parsed.add(pdb_id)
-                continue
 
             else:
 
@@ -221,7 +239,6 @@ class VectorDataset(torch.utils.data.Dataset):
 
                 if protein_coord is None:
                     not_correctly_parsed.add(pdb_id)
-                    continue
 
                 else:
                     correctly_parsed.add(pdb_id)
