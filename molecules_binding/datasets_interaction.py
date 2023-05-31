@@ -157,7 +157,6 @@ class GraphDataset(Dataset):
                     # molecule, and those edges have features
                     # [0,..,0, 3-dimensional features]
 
-
                     edges_both, edges_dis_both = create_edges_protein_ligand(
                         num_atoms_ligand, num_atoms_protein, ligand_coord,
                         protein_coord, threshold)
