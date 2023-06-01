@@ -91,7 +91,7 @@ def main(_):
     if FLAGS.mlflow_server_uri is not None:
         mlflow.set_tracking_uri(FLAGS.mlflow_server_uri)
 
-    mlflow.set_experiment("lightning_graphnet")
+    mlflow.set_experiment("molecules_binding")
 
     with mlflow.start_run():
         _log_parameters(batch_size=FLAGS.batch_size,
