@@ -43,7 +43,9 @@ flags.DEFINE_integer(
     "How many epochs to wait for improvement before stopping.")
 flags.DEFINE_boolean("shuffle", False, "Sanity Check: Shuffle labels")
 flags.DEFINE_integer("shuffling_seed", 42, "Seed for shuffling labels")
-flags.DEFINE_boolean("sanity check rotation", False, "Sanity Check: Rotate the graph")
+flags.DEFINE_boolean("sanity check rotation", False,
+                     "Sanity Check: Rotate the graph")
+
 
 def _log_parameters(**kwargs):
     for key, value in kwargs.items():
@@ -69,11 +71,37 @@ def main(_):
         dataset, [train_size, test_size],
         generator=torch.Generator().manual_seed(FLAGS.splitting_seed))
 
-    # if FLAGS.sanity_check_rotation:
-    #     for i in range(len(val_dataset)):
-    #         center_rotation = val_dataset[i].pos.mean(axis=0)
-    #         val_dataset[i].pos = (val_dataset[i].pos - center_rotation) + center_rotation
+    if FLAGS.sanity_check_rotation:
+        for i in range(len(val_dataset)):
+            center_rotation = val_dataset[i].pos.mean(axis=0)
 
+            angle = torch.tensor(45)  # Rotation angle in degrees
+            axis = torch.tensor([0, 0, 1])  # Rotation axis (e.g., Z-axis)
+            angle_rad = torch.deg2rad(angle)
+            cos_theta = torch.cos(angle_rad)
+            sin_theta = torch.sin(angle_rad)
+            u_x, u_y, u_z = axis
+
+            rotation_matrix = torch.tensor(
+                [[
+                    cos_theta + (u_x**2) * (1 - cos_theta),
+                    u_x * u_y * (1 - cos_theta) - u_z * sin_theta,
+                    u_x * u_z * (1 - cos_theta) + u_y * sin_theta
+                ],
+                 [
+                     u_y * u_x * (1 - cos_theta) + u_z * sin_theta,
+                     cos_theta + (u_y**2) * (1 - cos_theta),
+                     u_y * u_z * (1 - cos_theta) - u_x * sin_theta
+                 ],
+                 [
+                     u_z * u_x * (1 - cos_theta) - u_y * sin_theta,
+                     u_z * u_y * (1 - cos_theta) + u_x * sin_theta,
+                     cos_theta + (u_z**2) * (1 - cos_theta)
+                 ]])
+            # rotated coords
+            val_dataset[i].pos = torch.matmul(
+                val_dataset[i].pos - center_rotation,
+                rotation_matrix) + center_rotation
 
     train_loader = DataLoader(train_dataset,
                               batch_size=FLAGS.batch_size,
