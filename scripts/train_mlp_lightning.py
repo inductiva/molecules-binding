@@ -32,6 +32,8 @@ flags.DEFINE_integer(
     "early_stopping_patience", 100,
     "How many epochs to wait for improvement before stopping.")
 
+flags.DEFINE_bool("shuffle_nodes", False, "Sanity Check: Shuffle nodes")
+
 
 def _log_parameters(**kwargs):
     for key, value in kwargs.items():
@@ -40,12 +42,15 @@ def _log_parameters(**kwargs):
 
 def main(_):
     dataset = torch.load(FLAGS.path_dataset)
-
     train_size = int(FLAGS.train_perc * len(dataset))
     test_size = len(dataset) - train_size
     train_dataset, val_dataset = torch.utils.data.random_split(
         dataset, [train_size, test_size],
         generator=torch.Generator().manual_seed(42))
+
+    if FLAGS.shuffle_nodes:
+        for i in val_dataset.indices:
+            dataset.shuffle_nodes(i)
 
     train_loader = torch.utils.data.DataLoader(train_dataset,
                                                batch_size=FLAGS.batch_size,
@@ -75,7 +80,8 @@ def main(_):
                         comment=FLAGS.add_comment,
                         first_layer_size=len(dataset[0][0]),
                         early_stopping_patience=FLAGS.early_stopping_patience,
-                        data_split=FLAGS.train_perc)
+                        data_split=FLAGS.train_perc,
+                        sanity_check_shuffle_nodes=FLAGS.shuffle_nodes)
         run_id = mlflow.active_run().info.run_id
         loss_callback = LossMonitor(run_id)
         metrics_callback = MetricsMonitor(run_id)
