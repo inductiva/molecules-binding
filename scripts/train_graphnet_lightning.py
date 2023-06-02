@@ -43,8 +43,10 @@ flags.DEFINE_integer(
     "How many epochs to wait for improvement before stopping.")
 flags.DEFINE_boolean("shuffle", False, "Sanity Check: Shuffle labels")
 flags.DEFINE_integer("shuffling_seed", 42, "Seed for shuffling labels")
-flags.DEFINE_boolean("sanity check rotation", False,
+flags.DEFINE_boolean("sanity_check_rotation", False,
                      "Sanity Check: Rotate the graph")
+flags.DEFINE_boolean("comparing_with_mlp", False,
+                     "Sanity Check: Compare with MLP")
 
 
 def _log_parameters(**kwargs):
@@ -70,6 +72,10 @@ def main(_):
     train_dataset, val_dataset = torch.utils.data.random_split(
         dataset, [train_size, test_size],
         generator=torch.Generator().manual_seed(FLAGS.splitting_seed))
+
+    if FLAGS.comparing_with_mlp:
+        for i in len(dataset):
+            dataset[i].edge_attr = None
 
     if FLAGS.sanity_check_rotation:
         for i in range(len(val_dataset)):
