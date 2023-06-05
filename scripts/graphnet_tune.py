@@ -108,9 +108,12 @@ def train(config, train_dataset, val_dataset, num_hidden_graph,
             min_delta=0,
             patience=early_stopping_patience,
             mode="min")
-        callbacks = [loss_callback, metrics_callback, early_stopping_callback]
 
         report = TuneReportCallback(["loss", "val_loss"], on="validation_end")
+
+        callbacks = [
+            loss_callback, metrics_callback, early_stopping_callback, report
+        ]
 
     # if FLAGS.use_ray:
     #     ray.init()
