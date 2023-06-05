@@ -131,7 +131,7 @@ def train(config, train_dataset, val_dataset, num_hidden_graph,
 
     trainer = Trainer(max_epochs=max_epochs,
                       accelerator=accelerator,
-                      callbacks=[callbacks, report],
+                      callbacks=callbacks,
                       logger=False)
 
     trainer.fit(model=lightning_model,
