@@ -47,6 +47,7 @@ flags.DEFINE_boolean("sanity_check_rotation", False,
                      "Sanity Check: Rotate the graph")
 flags.DEFINE_boolean("comparing_with_mlp", False,
                      "Sanity Check: Compare with MLP")
+flags.DEFINE_bool("shuffle_nodes", False, "Sanity Check: Shuffle nodes")
 
 
 def _log_parameters(**kwargs):
@@ -72,6 +73,10 @@ def main(_):
     train_dataset, val_dataset = torch.utils.data.random_split(
         dataset, [train_size, test_size],
         generator=torch.Generator().manual_seed(FLAGS.splitting_seed))
+
+    if FLAGS.shuffle_nodes:
+        for i in val_dataset.indices:
+            dataset.shuffle_nodes(i)
 
     if FLAGS.comparing_with_mlp:
         for i in range(len(dataset)):
@@ -108,7 +113,6 @@ def main(_):
     #         val_dataset[i].pos = torch.matmul(
     #             val_dataset[i].pos - center_rotation,
     #             rotation_matrix) + center_rotation
-
 
     train_loader = DataLoader(train_dataset,
                               batch_size=FLAGS.batch_size,

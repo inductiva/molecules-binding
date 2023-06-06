@@ -197,15 +197,14 @@ class GraphDataset(Dataset):
 
     def __getitem__(self, index):
         return self.data_list[index]
-    
+
     def shuffle_nodes(self, index) -> None:
         data = self.data_list[index]
         shuffled_indexes = torch.randperm(data.x.size(0))
         data.x = data.x[shuffled_indexes]
+        data.pos = data.pos[shuffled_indexes]
         # the edge indexes have to be updated in the same way
         data.edge_index = shuffled_indexes[data.edge_index]
-        data.pos = data.pos[shuffled_indexes]
-
 
 
 class VectorDataset(torch.utils.data.Dataset):
