@@ -37,8 +37,6 @@ flags.DEFINE_integer("max_epochs", 300, "number of epochs")
 flags.DEFINE_integer("num_workers", 3, "number of workers")
 flags.DEFINE_boolean("use_gpu", True, "True if using gpu, False if not")
 flags.DEFINE_string("comment", None, "Add a comment to the experiment.")
-# Flags for Ray Training
-flags.DEFINE_boolean("use_ray", False, "Controls if it uses ray")
 flags.DEFINE_integer("num_cpus_per_worker", 1,
                      "The number of cpus for each worker.")
 flags.DEFINE_string("mlflow_server_uri", None,
@@ -115,18 +113,6 @@ def train(config, train_dataset, val_dataset, num_hidden_graph,
             loss_callback, metrics_callback, early_stopping_callback, report
         ]
 
-    # if FLAGS.use_ray:
-    #     ray.init()
-
-    #     plugin = RayStrategy(num_workers=FLAGS.num_workers,
-    #                          num_cpus_per_worker=FLAGS.num_cpus_per_worker,
-    #                          use_gpu=FLAGS.use_gpu)
-    #     trainer = Trainer(max_epochs=FLAGS.max_epochs,
-    #                       strategy=plugin,
-    #                       logger=False,
-    #                       callbacks=callbacks,
-    #                       log_every_n_steps=20)
-    # else:
     accelerator = "gpu" if use_gpu else None
 
     trainer = Trainer(max_epochs=max_epochs,
