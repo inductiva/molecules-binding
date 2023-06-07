@@ -57,6 +57,7 @@ def train(config, train_dataset, val_dataset, num_hidden_graph,
           num_hidden_linear, batch_size, dropout_rate, max_epochs, comment,
           train_perc, splitting_seed, early_stopping_patience, num_workers,
           mlflow_server_uri, use_gpu):
+    print("function train called", flush=True)
     learning_rate = config["learning_rate"]
 
     train_loader = DataLoader(train_dataset,
@@ -67,13 +68,13 @@ def train(config, train_dataset, val_dataset, num_hidden_graph,
                             batch_size=batch_size,
                             num_workers=num_workers,
                             shuffle=False)
-
+    print("dataloaders created", flush=True)
     graph_layer_sizes = list(map(int, num_hidden_graph))
     linear_layer_sizes = list(map(int, num_hidden_linear))
     model = GraphNN(train_dataset[0].num_node_features, graph_layer_sizes,
                     linear_layer_sizes)
     model.double()
-
+    print("model created", flush=True)
     lightning_model = GraphNNLightning(model, learning_rate, batch_size,
                                        dropout_rate)
 
@@ -84,6 +85,7 @@ def train(config, train_dataset, val_dataset, num_hidden_graph,
     mlflow.set_experiment("molecules_binding")
 
     with mlflow.start_run():
+        print("mlflow run started", flush=True)
         _log_parameters(batch_size=batch_size,
                         learning_rate=learning_rate,
                         dropout_rate=dropout_rate,
@@ -112,17 +114,18 @@ def train(config, train_dataset, val_dataset, num_hidden_graph,
         callbacks = [
             loss_callback, metrics_callback, early_stopping_callback, report
         ]
-
+        print("callbacks created")
     accelerator = "gpu" if use_gpu else None
 
     trainer = Trainer(max_epochs=max_epochs,
                       accelerator=accelerator,
                       callbacks=callbacks,
                       logger=False)
-
+    print("trainer created", flush=True)
     trainer.fit(model=lightning_model,
                 train_dataloaders=train_loader,
                 val_dataloaders=val_loader)
+    print("trainer fit", flush=True)
 
 
 def main(_):
