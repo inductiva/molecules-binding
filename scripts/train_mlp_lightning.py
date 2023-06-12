@@ -21,6 +21,7 @@ flags.DEFINE_float("dropout_rate", 0.3, "Dropout rate")
 flags.DEFINE_multi_integer("num_hidden", [128, 128],
                            "size of the new features after conv layer")
 flags.DEFINE_float("train_perc", 0.8, "percentage of train-validation-split")
+flags.DEFINE_integer("splitting_seed", 42, "Seed for splitting dataset")
 flags.DEFINE_integer("batch_size", 32, "batch size")
 flags.DEFINE_integer("max_epochs", 100, "number of epochs")
 flags.DEFINE_integer("num_workers", 12, "number of workers")
@@ -47,7 +48,7 @@ def main(_):
     test_size = len(dataset) - train_size
     train_dataset, val_dataset = torch.utils.data.random_split(
         dataset, [train_size, test_size],
-        generator=torch.Generator().manual_seed(42))
+        generator=torch.Generator().manual_seed(FLAGS.splitting_seed))
 
     if FLAGS.shuffle_nodes:
         for i in val_dataset.indices:
@@ -85,6 +86,7 @@ def main(_):
                         first_layer_size=len(dataset[0][0]),
                         early_stopping_patience=FLAGS.early_stopping_patience,
                         data_split=FLAGS.train_perc,
+                        splitting_seed=FLAGS.splitting_seed,
                         sanity_check_shuffle_nodes=FLAGS.shuffle_nodes,
                         sanity_check_translate_complex=FLAGS.translate_complex)
         run_id = mlflow.active_run().info.run_id

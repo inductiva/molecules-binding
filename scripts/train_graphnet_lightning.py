@@ -48,6 +48,8 @@ flags.DEFINE_boolean("sanity_check_rotation", False,
 flags.DEFINE_boolean("comparing_with_mlp", False,
                      "Sanity Check: Compare with MLP")
 flags.DEFINE_bool("shuffle_nodes", False, "Sanity Check: Shuffle nodes")
+flags.DEFINE_bool("remove_coords", False,
+                  "remove coordinates of nodes, only for old dataset")
 
 
 def _log_parameters(**kwargs):
@@ -82,37 +84,14 @@ def main(_):
         for i in range(len(dataset)):
             dataset[i].edge_attr = None
 
-    # if FLAGS.sanity_check_rotation:
-    #     for i in range(len(val_dataset)):
-    #         center_rotation = val_dataset[i].pos.mean(axis=0)
+    if FLAGS.remove_coords:
+        for i in range(len(dataset)):
+            dataset.remove_coords_from_nodes(i)
 
-    #         angle = torch.tensor(45)  # Rotation angle in degrees
-    #         axis = torch.tensor([0, 0, 1])  # Rotation axis (e.g., Z-axis)
-    #         angle_rad = torch.deg2rad(angle)
-    #         cos_theta = torch.cos(angle_rad)
-    #         sin_theta = torch.sin(angle_rad)
-    #         u_x, u_y, u_z = axis
-
-    #         rotation_matrix = torch.tensor(
-    #             [[
-    #                 cos_theta + (u_x**2) * (1 - cos_theta),
-    #                 u_x * u_y * (1 - cos_theta) - u_z * sin_theta,
-    #                 u_x * u_z * (1 - cos_theta) + u_y * sin_theta
-    #             ],
-    #              [
-    #                  u_y * u_x * (1 - cos_theta) + u_z * sin_theta,
-    #                  cos_theta + (u_y**2) * (1 - cos_theta),
-    #                  u_y * u_z * (1 - cos_theta) - u_x * sin_theta
-    #              ],
-    #              [
-    #                  u_z * u_x * (1 - cos_theta) - u_y * sin_theta,
-    #                  u_z * u_y * (1 - cos_theta) + u_x * sin_theta,
-    #                  cos_theta + (u_z**2) * (1 - cos_theta)
-    #              ]])
-    #         # rotated coords
-    #         val_dataset[i].pos = torch.matmul(
-    #             val_dataset[i].pos - center_rotation,
-    #             rotation_matrix) + center_rotation
+    # only for previous representation of graphs
+    if FLAGS.sanity_check_rotation:
+        for i in val_dataset.indices:
+            dataset.rotate_graph(i, [30, 30, 30])
 
     train_loader = DataLoader(train_dataset,
                               batch_size=FLAGS.batch_size,
