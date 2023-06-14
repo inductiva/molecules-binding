@@ -91,7 +91,7 @@ def main(_):
     # only for previous representation of graphs
     if FLAGS.sanity_check_rotation:
         for i in val_dataset.indices:
-            dataset.rotate_graph(i, [30, 30, 30])
+            dataset.rotate_graph(i, [30, 30, 30], FLAGS.remove_coords)
 
     train_loader = DataLoader(train_dataset,
                               batch_size=FLAGS.batch_size,
@@ -129,7 +129,10 @@ def main(_):
                         num_edge_features=dataset[0].num_edge_features,
                         early_stopping_patience=FLAGS.early_stopping_patience,
                         dataset_size=len(dataset),
-                        splitting_seed=FLAGS.splitting_seed)
+                        splitting_seed=FLAGS.splitting_seed,
+                        shuffle_nodes=FLAGS.shuffle_nodes,
+                        remove_coords=FLAGS.remove_coords,
+                        comparing_with_mlp=FLAGS.comparing_with_mlp)
         run_id = mlflow.active_run().info.run_id
         loss_callback = LossMonitor(run_id)
         metrics_callback = MetricsMonitor(run_id)

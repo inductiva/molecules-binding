@@ -34,6 +34,7 @@ flags.DEFINE_integer(
     "How many epochs to wait for improvement before stopping.")
 
 flags.DEFINE_bool("shuffle_nodes", False, "Sanity Check: Shuffle nodes")
+flags.DEFINE_bool("shuffle_all_nodes", False, "Sanity Check: Shuffle all nodes")
 flags.DEFINE_bool("translate_complex", False, "Sanity Check: Translate complex")
 
 
@@ -53,6 +54,11 @@ def main(_):
     if FLAGS.shuffle_nodes:
         for i in val_dataset.indices:
             dataset.shuffle_nodes(i)
+
+    if FLAGS.shuffle_all_nodes:
+        for i in range(len(dataset)):
+            dataset.shuffle_nodes(i)
+
     if FLAGS.translate_complex:
         for i in val_dataset.indices:
             dataset.translate_complex(i)
@@ -88,7 +94,8 @@ def main(_):
                         data_split=FLAGS.train_perc,
                         splitting_seed=FLAGS.splitting_seed,
                         sanity_check_shuffle_nodes=FLAGS.shuffle_nodes,
-                        sanity_check_translate_complex=FLAGS.translate_complex)
+                        sanity_check_translate_complex=FLAGS.translate_complex,
+                        sanity_check_shuffle_all_nodes=FLAGS.shuffle_all_nodes)
         run_id = mlflow.active_run().info.run_id
         loss_callback = LossMonitor(run_id)
         metrics_callback = MetricsMonitor(run_id)

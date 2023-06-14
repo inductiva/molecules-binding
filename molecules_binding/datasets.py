@@ -124,12 +124,13 @@ class GraphDataset(Dataset):
 
         return self.data_list[index]
 
-    def rotate_graph(self, index, angles) -> None:
+    def rotate_graph(self, index, angles, no_coords) -> None:
         data = self.data_list[index]
         data.pos = rotate_coordinates_sanity_check(data.pos, angles)
-        data.x[:, -3:] = data.pos
         data.edge_attr[:, :3] = rotate_coordinates_sanity_check(
             data.edge_attr[:, :3], angles)
+        if not no_coords:
+            data.x[:, -3:] = data.pos
 
     def remove_coords_from_nodes(self, index) -> None:
         data = self.data_list[index]
