@@ -198,12 +198,25 @@ class GraphDataset(Dataset):
     def __getitem__(self, index):
         return self.data_list[index]
 
+    def shuffle_nodes(self, index) -> None:
+        data = self.data_list[index]
+        shuffled_indexes = torch.randperm(data.x.size(0))
+        shuffled_indexes_index = torch.argsort(shuffled_indexes)
+        data.x = data.x[shuffled_indexes_index]
+        data.pos = data.pos[shuffled_indexes_index]
+        # the edge indexes have to be updated in the same way
+        data.edge_index = shuffled_indexes[data.edge_index]
+
+    def translate_coords(self, index, translation) -> None:
+        data = self.data_list[index]
+        data.pos += translation
+
 
 class VectorDataset(torch.utils.data.Dataset):
     """ constructs a vector with coordinates padded and flatten
     (both the ligand and protein) and one-hot chemical element"""
 
-    def __init__(self, pdb_files):
+    def __init__(self, pdb_files, with_coords: bool):
         """
         Args:
             pdb_files: list with triplets containing
@@ -244,14 +257,17 @@ class VectorDataset(torch.utils.data.Dataset):
                     max_len_l = max(max_len_l, num_atoms_ligand)
                     max_len_p = max(max_len_p, num_atoms_protein)
 
-                    data += [
-                        (torch.cat(
-                            (torch.as_tensor(ligand_coord), atoms_ligand),
-                            dim=1),
-                         torch.cat(
-                             (torch.as_tensor(protein_coord), atoms_protein),
-                             dim=1), affinity)
-                    ]
+                    if with_coords:
+                        data += [[
+                            torch.cat(
+                                [torch.as_tensor(ligand_coord), atoms_ligand],
+                                dim=1),
+                            torch.cat(
+                                [torch.as_tensor(protein_coord), atoms_protein],
+                                dim=1), affinity
+                        ]]
+                    else:
+                        data += [[atoms_ligand, atoms_protein, affinity]]
 
         self.dataset_len = len(data)
         print(correctly_parsed)
@@ -278,6 +294,19 @@ class VectorDataset(torch.utils.data.Dataset):
             mode="constant",
             value=None)
 
-        return torch.flatten(
-            torch.cat((protein,ligand), dim = 0).float()), \
+        return [
+            torch.flatten(torch.cat((protein, ligand), dim=0).float()),
             np.float64(affinity)
+        ]
+
+    def shuffle_nodes(self, index: int) -> None:
+        protein, ligand, affinity = self.data[index]
+        protein = protein[torch.randperm(protein.shape[0])]
+        ligand = ligand[torch.randperm(ligand.shape[0])]
+        self.data[index] = [protein, ligand, affinity]
+
+    def translate_complex(self, index: int) -> None:
+        protein, ligand, affinity = self.data[index]
+        protein[:, -3:] = protein[:, -3:] + 3
+        ligand[:, -3:] = ligand[:, -3:] + 3
+        self.data[index] = [protein, ligand, affinity]

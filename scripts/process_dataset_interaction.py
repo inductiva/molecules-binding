@@ -36,10 +36,14 @@ flags.DEFINE_enum("which_file_protein", "pocket",
                   ["pocket", "protein", "processed"],
                   "can choose either the entire protein or just the pocket")
 
+flags.DEFINE_bool("with_coords_mlp", False,
+                  "if True, include coordinates in the mlp dataset")
+
 
 def create_dataset(direct: str, affinity_dir: str, path: str, threshold: float,
                    which_model: str, which_file_ligand: str,
-                   which_file_protein: str, not_include_test_set: bool):
+                   which_file_protein: str, not_include_test_set: bool,
+                   with_coords_mlp: bool):
 
     affinity_dict = get_affinities(affinity_dir)
 
@@ -56,14 +60,15 @@ def create_dataset(direct: str, affinity_dir: str, path: str, threshold: float,
         datasetg = GraphDataset(pdb_files, threshold)
         torch.save(datasetg, path)
     elif which_model == "mlp":
-        datasetv = VectorDataset(pdb_files)
+        datasetv = VectorDataset(pdb_files, with_coords_mlp)
         torch.save(datasetv, path)
 
 
 def main(_):
     create_dataset(FLAGS.data_dir, FLAGS.affinity_dir, FLAGS.path_dataset,
                    FLAGS.threshold, FLAGS.which_model, FLAGS.which_file_ligand,
-                   FLAGS.which_file_protein, FLAGS.not_include_test_set)
+                   FLAGS.which_file_protein, FLAGS.not_include_test_set,
+                   FLAGS.with_coords_mlp)
 
 
 if __name__ == "__main__":
