@@ -37,7 +37,7 @@ def create_edges_protein_ligand(num_atoms_ligand, num_atoms_protein,
     return edges_both, edges_features
 
 
-def rotate_coordinates_sanity_check(coordinates, angles):
+def rotate_coordinates(coordinates, angles):
     angles_rad = np.radians(angles)
 
     rotation_x = np.array([[1, 0, 0],
@@ -126,9 +126,9 @@ class GraphDataset(Dataset):
 
     def rotate_graph(self, index, angles, no_coords) -> None:
         data = self.data_list[index]
-        data.pos = rotate_coordinates_sanity_check(data.pos, angles)
-        data.edge_attr[:, :3] = rotate_coordinates_sanity_check(
-            data.edge_attr[:, :3], angles)
+        data.pos = rotate_coordinates(data.pos, angles)
+        data.edge_attr[:, :3] = rotate_coordinates(data.edge_attr[:, :3],
+                                                   angles)
         if not no_coords:
             data.x[:, -3:] = data.pos
 

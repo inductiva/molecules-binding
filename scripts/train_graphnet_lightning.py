@@ -45,6 +45,8 @@ flags.DEFINE_boolean("shuffle", False, "Sanity Check: Shuffle labels")
 flags.DEFINE_integer("shuffling_seed", 42, "Seed for shuffling labels")
 flags.DEFINE_boolean("sanity_check_rotation", False,
                      "Sanity Check: Rotate the graph")
+flags.DEFINE_list("rotation_angles", [30, 30, 30],
+                  "Rotation angles if doing rotation sanity check")
 flags.DEFINE_boolean("comparing_with_mlp", False,
                      "Sanity Check: Compare with MLP")
 flags.DEFINE_bool("shuffle_nodes", False, "Sanity Check: Shuffle nodes")
@@ -90,8 +92,9 @@ def main(_):
 
     # only for previous representation of graphs
     if FLAGS.sanity_check_rotation:
+        rotation_angles = list(map(int, FLAGS.rotation_angles))
         for i in val_dataset.indices:
-            dataset.rotate_graph(i, [30, 30, 30], FLAGS.remove_coords)
+            dataset.rotate_graph(i, rotation_angles, FLAGS.remove_coords)
 
     train_loader = DataLoader(train_dataset,
                               batch_size=FLAGS.batch_size,
