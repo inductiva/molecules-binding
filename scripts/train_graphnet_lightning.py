@@ -52,6 +52,7 @@ flags.DEFINE_boolean("comparing_with_mlp", False,
 flags.DEFINE_bool("shuffle_nodes", False, "Sanity Check: Shuffle nodes")
 flags.DEFINE_bool("remove_coords", False,
                   "remove coordinates of nodes, only for old dataset")
+flags.DEFINE_float("weight_decay", 0, "value of weight decay")
 
 
 def _log_parameters(**kwargs):
@@ -112,18 +113,21 @@ def main(_):
     model.double()
 
     lightning_model = GraphNNLightning(model, FLAGS.learning_rate,
-                                       FLAGS.batch_size, FLAGS.dropout_rate)
+                                       FLAGS.batch_size, FLAGS.dropout_rate,
+                                       FLAGS.weight_decay)
 
     # Log training parameters to mlflow.
     if FLAGS.mlflow_server_uri is not None:
         mlflow.set_tracking_uri(FLAGS.mlflow_server_uri)
 
-    mlflow.set_experiment("lightning_graphnet")
+    mlflow.set_experiment("molecules_binding")
 
     with mlflow.start_run():
-        _log_parameters(batch_size=FLAGS.batch_size,
+        _log_parameters(model="GraphNet",
+                        batch_size=FLAGS.batch_size,
                         learning_rate=FLAGS.learning_rate,
                         dropout_rate=FLAGS.dropout_rate,
+                        weight_decay=FLAGS.weight_decay,
                         num_hidden_graph=FLAGS.num_hidden_graph,
                         num_hidden_linear=FLAGS.num_hidden_linear,
                         comment=FLAGS.comment,

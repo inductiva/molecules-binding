@@ -16,8 +16,9 @@ FLAGS = flags.FLAGS
 flags.DEFINE_string("path_dataset", None,
                     "specify the path to the stored processed dataset")
 flags.mark_flag_as_required("path_dataset")
-flags.DEFINE_float("learning_rate", 0.001, "learning rate")
+flags.DEFINE_float("learning_rate", 0.001, "Learning rate")
 flags.DEFINE_float("dropout_rate", 0.3, "Dropout rate")
+flags.DEFINE_float("weight_decay", 0, "Weight decay")
 flags.DEFINE_multi_integer("num_hidden", [128, 128],
                            "size of the new features after conv layer")
 flags.DEFINE_float("train_perc", 0.8, "percentage of train-validation-split")
@@ -76,17 +77,20 @@ def main(_):
     model = MLP(len(dataset[0][0]), layer_sizes, 1)
     model.double()
 
-    lightning_model = MLPLightning(model, FLAGS.learning_rate)
+    lightning_model = MLPLightning(model, FLAGS.learning_rate,
+                                   FLAGS.weight_decay)
 
     # Log training parameters to mlflow.
     if FLAGS.mlflow_server_uri is not None:
         mlflow.set_tracking_uri(FLAGS.mlflow_server_uri)
 
-    mlflow.set_experiment("lightning_mlp")
+    mlflow.set_experiment("molecules_binding")
 
     with mlflow.start_run():
-        _log_parameters(batch_size=FLAGS.batch_size,
+        _log_parameters(model="MLP",
+                        batch_size=FLAGS.batch_size,
                         learning_rate=FLAGS.learning_rate,
+                        weight_decay=FLAGS.weight_decay,
                         num_hidden=FLAGS.num_hidden,
                         comment=FLAGS.add_comment,
                         first_layer_size=len(dataset[0][0]),
