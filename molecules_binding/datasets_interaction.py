@@ -87,7 +87,7 @@ def create_edges_protein_ligand(num_atoms_ligand, num_atoms_protein,
             # (done in the original paper, but was adapted to other values)
             angle_info = [
                 np.max(angles) * 0.01,
-                np.sum(angles) * 0.01,
+                np.sum(angles) * 0.001,
                 np.mean(angles) * 0.01
             ]
             area_info = [
@@ -97,7 +97,7 @@ def create_edges_protein_ligand(num_atoms_ligand, num_atoms_protein,
             ]
             distance_info = [
                 np.max(distances) * 0.1,
-                np.sum(distances) * 0.1,
+                np.sum(distances) * 0.01,
                 np.mean(distances) * 0.1
             ]
         else:
