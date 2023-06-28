@@ -20,7 +20,7 @@ flags.DEFINE_float("learning_rate", 0.001, "learning rate")
 flags.DEFINE_float("dropout_rate", 0.3, "Dropout rate")
 flags.DEFINE_multi_integer("num_hidden", [128, 128],
                            "size of the new features after conv layer")
-flags.DEFINE_float("train_perc", 0.8, "percentage of train-validation-split")
+flags.DEFINE_float("train_split", 0.8, "percentage of train-validation-split")
 flags.DEFINE_integer("batch_size", 32, "batch size")
 flags.DEFINE_integer("max_epochs", 100, "number of epochs")
 flags.DEFINE_integer("num_workers", 12, "number of workers")
@@ -41,7 +41,7 @@ def _log_parameters(**kwargs):
 def main(_):
     dataset = torch.load(FLAGS.path_dataset)
 
-    train_size = int(FLAGS.train_perc * len(dataset))
+    train_size = int(FLAGS.train_split * len(dataset))
     test_size = len(dataset) - train_size
     train_dataset, val_dataset = torch.utils.data.random_split(
         dataset, [train_size, test_size],
@@ -75,7 +75,7 @@ def main(_):
                         comment=FLAGS.add_comment,
                         first_layer_size=len(dataset[0][0]),
                         early_stopping_patience=FLAGS.early_stopping_patience,
-                        data_split=FLAGS.train_perc,
+                        data_split=FLAGS.train_split,
                         dataset=str(FLAGS.path_dataset))
         run_id = mlflow.active_run().info.run_id
         loss_callback = LossMonitor(run_id)

@@ -22,7 +22,7 @@ flags.DEFINE_string("path_dataset", None,
 flags.mark_flag_as_required("path_dataset")
 flags.DEFINE_float("learning_rate", 0.001, "learning rate")
 flags.DEFINE_float("dropout_rate", 0.3, "Dropout rate")
-flags.DEFINE_float("train_perc", 0.9, "percentage of train-validation-split")
+flags.DEFINE_float("train_split", 0.9, "percentage of train-validation-split")
 flags.DEFINE_integer("splitting_seed", 42, "Seed for splitting dataset")
 flags.DEFINE_list("num_hidden_graph", [64, 96, 128],
                   "size of message passing layers")
@@ -52,7 +52,7 @@ def _log_parameters(**kwargs):
 
 def main(_):
     dataset = torch.load(FLAGS.path_dataset)
-    train_size = int(FLAGS.train_perc * len(dataset))
+    train_size = int(FLAGS.train_split * len(dataset))
     test_size = len(dataset) - train_size
 
     # Sanity Check : Shuffling labels
@@ -100,7 +100,7 @@ def main(_):
                         num_hidden_graph=FLAGS.num_hidden_graph,
                         num_hidden_linear=FLAGS.num_hidden_linear,
                         comment=FLAGS.comment,
-                        data_split=FLAGS.train_perc,
+                        data_split=FLAGS.train_split,
                         num_node_features=dataset[0].num_node_features,
                         num_edge_features=dataset[0].num_edge_features,
                         early_stopping_patience=FLAGS.early_stopping_patience,
