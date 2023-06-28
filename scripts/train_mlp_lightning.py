@@ -75,7 +75,8 @@ def main(_):
                         comment=FLAGS.add_comment,
                         first_layer_size=len(dataset[0][0]),
                         early_stopping_patience=FLAGS.early_stopping_patience,
-                        data_split=FLAGS.train_perc)
+                        data_split=FLAGS.train_perc,
+                        dataset=str(FLAGS.path_dataset))
         run_id = mlflow.active_run().info.run_id
         loss_callback = LossMonitor(run_id)
         metrics_callback = MetricsMonitor(run_id)
