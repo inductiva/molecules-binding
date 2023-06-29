@@ -244,12 +244,15 @@ class VectorDataset(torch.utils.data.Dataset):
                     max_len_l = max(max_len_l, num_atoms_ligand)
                     max_len_p = max(max_len_p, num_atoms_protein)
 
-                    data += [(torch.cat(
-                        (torch.as_tensor(ligand_coord * 0.1), atoms_ligand),
-                        dim=1),
-                              torch.cat((torch.as_tensor(
-                                  protein_coord * 0.1), atoms_protein),
-                                        dim=1), affinity)]
+                    data += [[
+                        torch.cat(
+                            [torch.as_tensor(ligand_coord * 0.1), atoms_ligand],
+                            dim=1),
+                        torch.cat([
+                            torch.as_tensor(protein_coord * 0.1), atoms_protein
+                        ],
+                                  dim=1), affinity
+                    ]]
 
         self.dataset_len = len(data)
         print(correctly_parsed)
