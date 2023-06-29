@@ -26,6 +26,7 @@ flags.DEFINE_float("train_split", 0.9, "percentage of train-validation-split")
 flags.DEFINE_integer("splitting_seed", 42, "Seed for splitting dataset")
 flags.DEFINE_list("num_hidden_graph", [64, 96, 128],
                   "size of message passing layers")
+flags.DEFINE_bool("normalize_edges", False, "Normalize edges")
 flags.DEFINE_list("num_hidden_linear", [], "size of linear layers")
 flags.DEFINE_integer("batch_size", 32, "batch size")
 flags.DEFINE_integer("max_epochs", 300, "number of epochs")
@@ -54,6 +55,13 @@ def main(_):
     dataset = torch.load(FLAGS.path_dataset)
     train_size = int(FLAGS.train_split * len(dataset))
     test_size = len(dataset) - train_size
+
+    if FLAGS.normalize_edges:
+        for data in dataset:
+            data.edge_attr[:, -8] = data.edge_attr[:, -8] * 0.1
+            data.edge_attr[:, -6:-3] = data.edge_attr[:, -6:-3] * 0.1
+            data.edge_attr[:, -5] = data.edge_attr[:, -5] * 0.1
+            data.edge_attr[:, -2] = data.edge_attr[:, -2] * 0.1
 
     # Sanity Check : Shuffling labels
     if FLAGS.shuffle:
