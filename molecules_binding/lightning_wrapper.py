@@ -16,7 +16,8 @@ class GraphNNLightning(pl.LightningModule):
         Graph Convolution Neural Network
     """
 
-    def __init__(self, model, learning_rate, batch_size, dropout_rate):
+    def __init__(self, model, learning_rate, batch_size, dropout_rate,
+                 weight_decay):
         super().__init__()
 
         self.model = model
@@ -24,6 +25,7 @@ class GraphNNLightning(pl.LightningModule):
         self.batch_size = batch_size
         self.dropout_rate = dropout_rate
         self.criterion = torch.nn.MSELoss()
+        self.weight_decay = weight_decay
 
     def compute_statistics(self, data, training):
         labels = data.y
@@ -50,7 +52,9 @@ class GraphNNLightning(pl.LightningModule):
         self.log("loss", avg_loss, batch_size=self.batch_size)
 
     def configure_optimizers(self):
-        return torch.optim.Adam(self.model.parameters(), lr=self.learning_rate)
+        return torch.optim.Adam(self.model.parameters(),
+                                lr=self.learning_rate,
+                                weight_decay=self.weight_decay)
 
     def validation_step(self, data, _):
         (val_loss, mae, rmse, pearson_correlation,
@@ -93,11 +97,12 @@ class MLPLightning(pl.LightningModule):
         Multilayer Perceptron
     """
 
-    def __init__(self, model, learning_rate):
+    def __init__(self, model, learning_rate, weight_decay):
         super().__init__()
         self.model = model
         self.learning_rate = learning_rate
         self.criterion = torch.nn.MSELoss()
+        self.weight_decay = weight_decay
 
     def compute_statistics(self, data, training):
         inputs, labels = data
@@ -126,7 +131,9 @@ class MLPLightning(pl.LightningModule):
         self.log("loss", avg_loss)
 
     def configure_optimizers(self):
-        return torch.optim.Adam(self.model.parameters(), lr=self.learning_rate)
+        return torch.optim.Adam(self.model.parameters(),
+                                lr=self.learning_rate,
+                                weight_decay=self.weight_decay)
 
     def validation_step(self, data, _):
         (val_loss, mae, rmse, pearson_correlation,

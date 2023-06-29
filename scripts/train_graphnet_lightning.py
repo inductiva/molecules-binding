@@ -44,6 +44,16 @@ flags.DEFINE_integer(
     "How many epochs to wait for improvement before stopping.")
 flags.DEFINE_boolean("shuffle", False, "Sanity Check: Shuffle labels")
 flags.DEFINE_integer("shuffling_seed", 42, "Seed for shuffling labels")
+flags.DEFINE_boolean("sanity_check_rotation", False,
+                     "Sanity Check: Rotate the graph")
+flags.DEFINE_list("rotation_angles", [30, 30, 30],
+                  "Rotation angles if doing rotation sanity check")
+flags.DEFINE_boolean("comparing_with_mlp", False,
+                     "Sanity Check: Compare with MLP")
+flags.DEFINE_bool("shuffle_nodes", False, "Sanity Check: Shuffle nodes")
+flags.DEFINE_bool("remove_coords", False,
+                  "remove coordinates of nodes, only for old dataset")
+flags.DEFINE_float("weight_decay", 0, "value of weight decay")
 
 
 def _log_parameters(**kwargs):
@@ -77,6 +87,24 @@ def main(_):
         dataset, [train_size, test_size],
         generator=torch.Generator().manual_seed(FLAGS.splitting_seed))
 
+    if FLAGS.shuffle_nodes:
+        for i in val_dataset.indices:
+            dataset.shuffle_nodes(i)
+
+    if FLAGS.comparing_with_mlp:
+        for i in range(len(dataset)):
+            dataset[i].edge_attr = None
+
+    if FLAGS.remove_coords:
+        for i in range(len(dataset)):
+            dataset.remove_coords_from_nodes(i)
+
+    # only for previous representation of graphs
+    if FLAGS.sanity_check_rotation:
+        rotation_angles = list(map(int, FLAGS.rotation_angles))
+        for i in val_dataset.indices:
+            dataset.rotate_graph(i, rotation_angles, FLAGS.remove_coords)
+
     train_loader = DataLoader(train_dataset,
                               batch_size=FLAGS.batch_size,
                               num_workers=FLAGS.num_workers,
@@ -93,18 +121,21 @@ def main(_):
     model.double()
 
     lightning_model = GraphNNLightning(model, FLAGS.learning_rate,
-                                       FLAGS.batch_size, FLAGS.dropout_rate)
+                                       FLAGS.batch_size, FLAGS.dropout_rate,
+                                       FLAGS.weight_decay)
 
     # Log training parameters to mlflow.
     if FLAGS.mlflow_server_uri is not None:
         mlflow.set_tracking_uri(FLAGS.mlflow_server_uri)
 
-    mlflow.set_experiment("lightning_graphnet")
+    mlflow.set_experiment("molecules_binding")
 
     with mlflow.start_run():
-        _log_parameters(batch_size=FLAGS.batch_size,
+        _log_parameters(model="GraphNet",
+                        batch_size=FLAGS.batch_size,
                         learning_rate=FLAGS.learning_rate,
                         dropout_rate=FLAGS.dropout_rate,
+                        weight_decay=FLAGS.weight_decay,
                         num_hidden_graph=FLAGS.num_hidden_graph,
                         num_hidden_linear=FLAGS.num_hidden_linear,
                         comment=FLAGS.comment,
@@ -115,6 +146,10 @@ def main(_):
                         dataset_size=len(dataset),
                         splitting_seed=FLAGS.splitting_seed,
                         dataset=str(FLAGS.path_dataset))
+                        shuffle_nodes=FLAGS.shuffle_nodes,
+                        remove_coords=FLAGS.remove_coords,
+                        comparing_with_mlp=FLAGS.comparing_with_mlp)
+              
         run_id = mlflow.active_run().info.run_id
         loss_callback = LossMonitor(run_id)
         metrics_callback = MetricsMonitor(run_id)
