@@ -84,7 +84,7 @@ def create_edges_protein_ligand(num_atoms_ligand, num_atoms_protein,
                 areas.append(area)
                 distances.append(distance)
             # normalizing values to be in the same order of magnitude
-            # (done in the original paper)
+            # (done in the original paper, but was adapted to other values)
             angle_info = [
                 np.max(angles) * 0.01,
                 np.sum(angles) * 0.01,
@@ -260,10 +260,10 @@ class VectorDataset(torch.utils.data.Dataset):
                     if with_coords:
                         data += [[
                             torch.cat(
-                                [torch.as_tensor(ligand_coord), atoms_ligand],
+                                [torch.as_tensor(ligand_coord * 0.1), atoms_ligand],
                                 dim=1),
                             torch.cat(
-                                [torch.as_tensor(protein_coord), atoms_protein],
+                                [torch.as_tensor(protein_coord * 0.1), atoms_protein],
                                 dim=1), affinity
                         ]]
                     else:

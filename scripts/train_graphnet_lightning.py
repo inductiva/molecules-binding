@@ -22,10 +22,11 @@ flags.DEFINE_string("path_dataset", None,
 flags.mark_flag_as_required("path_dataset")
 flags.DEFINE_float("learning_rate", 0.001, "learning rate")
 flags.DEFINE_float("dropout_rate", 0.3, "Dropout rate")
-flags.DEFINE_float("train_perc", 0.9, "percentage of train-validation-split")
+flags.DEFINE_float("train_split", 0.9, "percentage of train-validation-split")
 flags.DEFINE_integer("splitting_seed", 42, "Seed for splitting dataset")
 flags.DEFINE_list("num_hidden_graph", [64, 96, 128],
                   "size of message passing layers")
+flags.DEFINE_bool("normalize_edges", False, "Normalize edges")
 flags.DEFINE_list("num_hidden_linear", [], "size of linear layers")
 flags.DEFINE_integer("batch_size", 32, "batch size")
 flags.DEFINE_integer("max_epochs", 300, "number of epochs")
@@ -62,8 +63,15 @@ def _log_parameters(**kwargs):
 
 def main(_):
     dataset = torch.load(FLAGS.path_dataset)
-    train_size = int(FLAGS.train_perc * len(dataset))
+    train_size = int(FLAGS.train_split * len(dataset))
     test_size = len(dataset) - train_size
+
+    if FLAGS.normalize_edges:
+        for data in dataset:
+            data.edge_attr[:, -8] = data.edge_attr[:, -8] * 0.1
+            data.edge_attr[:, -6:-3] = data.edge_attr[:, -6:-3] * 0.1
+            data.edge_attr[:, -5] = data.edge_attr[:, -5] * 0.1
+            data.edge_attr[:, -2] = data.edge_attr[:, -2] * 0.1
 
     # Sanity Check : Shuffling labels
     if FLAGS.shuffle:
@@ -131,15 +139,17 @@ def main(_):
                         num_hidden_graph=FLAGS.num_hidden_graph,
                         num_hidden_linear=FLAGS.num_hidden_linear,
                         comment=FLAGS.comment,
-                        data_split=FLAGS.train_perc,
+                        data_split=FLAGS.train_split,
                         num_node_features=dataset[0].num_node_features,
                         num_edge_features=dataset[0].num_edge_features,
                         early_stopping_patience=FLAGS.early_stopping_patience,
                         dataset_size=len(dataset),
                         splitting_seed=FLAGS.splitting_seed,
+                        dataset=str(FLAGS.path_dataset))
                         shuffle_nodes=FLAGS.shuffle_nodes,
                         remove_coords=FLAGS.remove_coords,
                         comparing_with_mlp=FLAGS.comparing_with_mlp)
+              
         run_id = mlflow.active_run().info.run_id
         loss_callback = LossMonitor(run_id)
         metrics_callback = MetricsMonitor(run_id)
