@@ -9,12 +9,14 @@ from torch_geometric.data import Data, Dataset
 import numpy as np
 import torch
 from molecules_binding.parsers_interaction import molecule_info
+from numba import njit
 
 
+@njit
 def structural_info(a, b, c):
     """
     Args:
-        a, b, c: numpy arrays representing coordinates of 3 points
+        a, b, c: numpy arrays representing 3D coordinates of 3 points
     Returns:
         angle between the vectors ab and ac
         area of the triangle abc
@@ -23,14 +25,16 @@ def structural_info(a, b, c):
 
     ab = b - a
     ac = c - a
-    cosine_angle = np.dot(ab, ac) / (np.linalg.norm(ab) * np.linalg.norm(ac))
-    cosine_angle = cosine_angle if cosine_angle >= -1.0 else -1.0
+    ab_norm = np.linalg.norm(ab)
+    ac_norm = np.linalg.norm(ac)
+    norm_prod = ab_norm * ac_norm
+
+    cosine_angle = np.dot(ab, ac) / norm_prod
+    cosine_angle = max(cosine_angle, -1.0)
     angle = np.arccos(cosine_angle)
 
-    ab_ = np.sqrt(np.sum(ab**2))
-    ac_ = np.sqrt(np.sum(ac**2))
-    area = 0.5 * ab_ * ac_ * np.sin(angle)
-    return np.degrees(angle), area, ac_
+    area = 0.5 * norm_prod * np.sin(angle)
+    return np.degrees(angle), area, ac_norm
 
 
 def create_edges_protein_ligand(num_atoms_ligand, num_atoms_protein,
