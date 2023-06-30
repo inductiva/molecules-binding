@@ -145,11 +145,11 @@ def main(_):
                         early_stopping_patience=FLAGS.early_stopping_patience,
                         dataset_size=len(dataset),
                         splitting_seed=FLAGS.splitting_seed,
-                        dataset=str(FLAGS.path_dataset))
+                        dataset=str(FLAGS.path_dataset),
                         shuffle_nodes=FLAGS.shuffle_nodes,
                         remove_coords=FLAGS.remove_coords,
                         comparing_with_mlp=FLAGS.comparing_with_mlp)
-              
+
         run_id = mlflow.active_run().info.run_id
         loss_callback = LossMonitor(run_id)
         metrics_callback = MetricsMonitor(run_id)
