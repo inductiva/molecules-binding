@@ -9,12 +9,14 @@ from torch_geometric.data import Data, Dataset
 import numpy as np
 import torch
 from molecules_binding.parsers_interaction import molecule_info
+from numba import njit
 
 
+@njit
 def structural_info(a, b, c):
     """
     Args:
-        a, b, c: numpy arrays representing coordinates of 3 points
+        a, b, c: numpy arrays representing 3D coordinates of 3 points
     Returns:
         angle between the vectors ab and ac
         area of the triangle abc
@@ -23,14 +25,16 @@ def structural_info(a, b, c):
 
     ab = b - a
     ac = c - a
-    cosine_angle = np.dot(ab, ac) / (np.linalg.norm(ab) * np.linalg.norm(ac))
-    cosine_angle = cosine_angle if cosine_angle >= -1.0 else -1.0
+    ab_norm = np.linalg.norm(ab)
+    ac_norm = np.linalg.norm(ac)
+    norm_prod = ab_norm * ac_norm
+
+    cosine_angle = np.dot(ab, ac) / norm_prod
+    cosine_angle = max(cosine_angle, -1.0)
     angle = np.arccos(cosine_angle)
 
-    ab_ = np.sqrt(np.sum(ab**2))
-    ac_ = np.sqrt(np.sum(ac**2))
-    area = 0.5 * ab_ * ac_ * np.sin(angle)
-    return np.degrees(angle), area, ac_
+    area = 0.5 * norm_prod * np.sin(angle)
+    return np.degrees(angle), area, ac_norm
 
 
 def create_edges_protein_ligand(num_atoms_ligand, num_atoms_protein,
@@ -198,12 +202,25 @@ class GraphDataset(Dataset):
     def __getitem__(self, index):
         return self.data_list[index]
 
+    def shuffle_nodes(self, index) -> None:
+        data = self.data_list[index]
+        shuffled_indexes = torch.randperm(data.x.size(0))
+        shuffled_indexes_index = torch.argsort(shuffled_indexes)
+        data.x = data.x[shuffled_indexes_index]
+        data.pos = data.pos[shuffled_indexes_index]
+        # the edge indexes have to be updated in the same way
+        data.edge_index = shuffled_indexes[data.edge_index]
+
+    def translate_coords(self, index, translation) -> None:
+        data = self.data_list[index]
+        data.pos += translation
+
 
 class VectorDataset(torch.utils.data.Dataset):
     """ constructs a vector with coordinates padded and flatten
     (both the ligand and protein) and one-hot chemical element"""
 
-    def __init__(self, pdb_files):
+    def __init__(self, pdb_files, with_coords: bool):
         """
         Args:
             pdb_files: list with triplets containing
@@ -244,15 +261,22 @@ class VectorDataset(torch.utils.data.Dataset):
                     max_len_l = max(max_len_l, num_atoms_ligand)
                     max_len_p = max(max_len_p, num_atoms_protein)
 
-                    data += [[
-                        torch.cat(
-                            [torch.as_tensor(ligand_coord * 0.1), atoms_ligand],
-                            dim=1),
-                        torch.cat([
-                            torch.as_tensor(protein_coord * 0.1), atoms_protein
-                        ],
-                                  dim=1), affinity
-                    ]]
+                    if with_coords:
+                        data += [[
+                            torch.cat([
+                                torch.as_tensor(ligand_coord * 0.1),
+                                atoms_ligand
+                            ],
+                                      dim=1),
+                            torch.cat([
+                                torch.as_tensor(protein_coord * 0.1),
+                                atoms_protein
+                            ],
+                                      dim=1), affinity
+                        ]]
+                    else:
+                        data += [[atoms_ligand, atoms_protein, affinity]]
+
 
         self.dataset_len = len(data)
         print(correctly_parsed)
@@ -288,4 +312,10 @@ class VectorDataset(torch.utils.data.Dataset):
         protein, ligand, affinity = self.data[index]
         protein = protein[torch.randperm(protein.shape[0])]
         ligand = ligand[torch.randperm(ligand.shape[0])]
+        self.data[index] = [protein, ligand, affinity]
+
+    def translate_complex(self, index: int) -> None:
+        protein, ligand, affinity = self.data[index]
+        protein[:, -3:] = protein[:, -3:] + 3
+        ligand[:, -3:] = ligand[:, -3:] + 3
         self.data[index] = [protein, ligand, affinity]

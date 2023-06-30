@@ -37,6 +37,29 @@ def create_edges_protein_ligand(num_atoms_ligand, num_atoms_protein,
     return edges_both, edges_features
 
 
+def rotate_coordinates(coordinates, angles):
+    angles_rad = np.radians(angles)
+
+    rotation_x = np.array([[1, 0, 0],
+                           [0, np.cos(angles_rad[0]), -np.sin(angles_rad[0])],
+                           [0, np.sin(angles_rad[0]),
+                            np.cos(angles_rad[0])]])
+
+    rotation_y = np.array([[np.cos(angles_rad[1]), 0,
+                            np.sin(angles_rad[1])], [0, 1, 0],
+                           [-np.sin(angles_rad[1]), 0,
+                            np.cos(angles_rad[1])]])
+
+    rotation_z = np.array([[np.cos(angles_rad[2]), -np.sin(angles_rad[2]), 0],
+                           [np.sin(angles_rad[2]),
+                            np.cos(angles_rad[2]), 0], [0, 0, 1]])
+
+    rotated_coordinates = np.matmul(
+        rotation_z, np.matmul(rotation_y, np.matmul(rotation_x,
+                                                    coordinates.T))).T
+    return rotated_coordinates
+
+
 class GraphDataset(Dataset):
     """ builds the graph for each complex"""
 
@@ -100,6 +123,18 @@ class GraphDataset(Dataset):
     def __getitem__(self, index):
 
         return self.data_list[index]
+
+    def rotate_graph(self, index, angles, no_coords) -> None:
+        data = self.data_list[index]
+        data.pos = rotate_coordinates(data.pos, angles)
+        data.edge_attr[:, :3] = rotate_coordinates(data.edge_attr[:, :3],
+                                                   angles)
+        if not no_coords:
+            data.x[:, -3:] = data.pos
+
+    def remove_coords_from_nodes(self, index) -> None:
+        data = self.data_list[index]
+        data.x = data.x[:, :-3]
 
 
 class VectorDataset(torch.utils.data.Dataset):
