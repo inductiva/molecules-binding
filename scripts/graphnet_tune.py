@@ -30,10 +30,11 @@ flags.DEFINE_float("train_perc", 0.9, "percentage of train-validation-split")
 flags.DEFINE_integer("splitting_seed", 42, "Seed for splitting dataset")
 # flags.DEFINE_list("num_hidden_graph", [64, 96, 128],
 #                   "size of message passing layers")
-flags.DEFINE_multi_string("num_hidden_layers", None,
-                          "try different number of message passing layers")
+flags.DEFINE_multi_string("dim_message_passing_layers", None,
+                          "try different numbers of message passing layers")
+flags.DEFINE_multi_string("dim_fully_connected_layers", None,
+                          "try different numbers of linear layers")
 
-flags.DEFINE_list("num_hidden_linear", [], "size of linear layers")
 flags.DEFINE_integer("batch_size", 32, "batch size")
 flags.DEFINE_integer("max_epochs", 300, "number of epochs")
 flags.DEFINE_integer("num_workers", 3, "number of workers")
@@ -55,8 +56,8 @@ def _log_parameters(**kwargs):
         mlflow.log_param(str(key), value)
 
 
-def train(config, train_dataset, val_dataset, num_hidden_linear, batch_size,
-          dropout_rate, max_epochs, comment, train_perc, splitting_seed,
+def train(config, train_dataset, val_dataset, batch_size, dropout_rate,
+          max_epochs, comment, train_perc, splitting_seed,
           early_stopping_patience, num_workers, mlflow_server_uri, use_gpu):
 
     learning_rate = config["learning_rate"]
@@ -70,11 +71,11 @@ def train(config, train_dataset, val_dataset, num_hidden_linear, batch_size,
                             num_workers=num_workers,
                             shuffle=False)
 
-    num_hidden_layer = config["num_hidden_layer"]
+    message_passing_layers = config["message_passing_layers"]
+    fully_connected_layers = config["fully_connected_layers"]
 
-    linear_layer_sizes = list(map(int, num_hidden_linear))
-    model = GraphNN(train_dataset[0].num_node_features, num_hidden_layer,
-                    linear_layer_sizes)
+    model = GraphNN(train_dataset[0].num_node_features, message_passing_layers,
+                    fully_connected_layers)
     model.double()
     lightning_model = GraphNNLightning(model, learning_rate, batch_size,
                                        dropout_rate)
@@ -86,20 +87,18 @@ def train(config, train_dataset, val_dataset, num_hidden_linear, batch_size,
     mlflow.set_experiment("molecules_binding")
 
     with mlflow.start_run():
-        _log_parameters(
-            batch_size=batch_size,
-            learning_rate=learning_rate,
-            dropout_rate=dropout_rate,
-            # num_hidden_graph=num_hidden_graph,
-            num_hidden_layer=num_hidden_layer,
-            num_hidden_linear=num_hidden_linear,
-            comment=comment,
-            data_split=train_perc,
-            num_node_features=train_dataset[0].num_node_features,
-            num_edge_features=train_dataset[0].num_edge_features,
-            early_stopping_patience=early_stopping_patience,
-            dataset_size=len(train_dataset) + len(val_dataset),
-            splitting_seed=splitting_seed)
+        _log_parameters(batch_size=batch_size,
+                        learning_rate=learning_rate,
+                        dropout_rate=dropout_rate,
+                        message_passing_layers=message_passing_layers,
+                        fully_connected_layers=fully_connected_layers,
+                        comment=comment,
+                        data_split=train_perc,
+                        num_node_features=train_dataset[0].num_node_features,
+                        num_edge_features=train_dataset[0].num_edge_features,
+                        early_stopping_patience=early_stopping_patience,
+                        dataset_size=len(train_dataset) + len(val_dataset),
+                        splitting_seed=splitting_seed)
 
         run_id = mlflow.active_run().info.run_id
         loss_callback = LossMonitor(run_id)
@@ -148,17 +147,29 @@ def main(_):
         dataset, [train_size, test_size],
         generator=torch.Generator().manual_seed(FLAGS.splitting_seed))
 
-    num_hidden_layers = [
-        list(map(int, num_hidden_layer.split(" ")))
-        for num_hidden_layer in FLAGS.num_hidden_layers
+    dim_message_passing_layers = [
+        list(map(int, message_passing_layers.split(" ")))
+        for message_passing_layers in FLAGS.dim_message_passing_layers
+    ]
+
+    dim_fully_connected_layers = [
+        list(map(int, fully_connected_layers.split(" ")))
+        for fully_connected_layers in FLAGS.dim_fully_connected_layers
     ]
 
     config = {
         "learning_rate":
             tune.grid_search(list(map(float, FLAGS.learning_rates))),
-        "num_hidden_layer":
+        "message_passing_layers":
             tune.grid_search(
-                list(map(lambda x: list(map(int, x)), num_hidden_layers)))
+                list(
+                    map(lambda x: list(map(int, x)),
+                        dim_message_passing_layers))),
+        "fully_connected_layers":
+            tune.grid_search(
+                list(
+                    map(lambda x: list(map(int, x)),
+                        dim_fully_connected_layers)))
     }
 
     resources_per_trial = {
@@ -170,9 +181,6 @@ def main(_):
         train,
         train_dataset=train_dataset,
         val_dataset=val_dataset,
-        # num_hidden_graph=FLAGS.num_hidden_graph,
-        # num_hidden_layers=FLAGS.num_hidden_layers,
-        num_hidden_linear=FLAGS.num_hidden_linear,
         batch_size=FLAGS.batch_size,
         dropout_rate=FLAGS.dropout_rate,
         max_epochs=FLAGS.max_epochs,
