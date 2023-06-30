@@ -96,7 +96,7 @@ def main(_):
                         first_layer_size=len(dataset[0][0]),
                         early_stopping_patience=FLAGS.early_stopping_patience,
                         data_split=FLAGS.train_split,
-                        dataset=str(FLAGS.path_dataset)),
+                        dataset=str(FLAGS.path_dataset),
                         splitting_seed=FLAGS.splitting_seed,
                         sanity_check_shuffle_nodes=FLAGS.shuffle_nodes,
                         sanity_check_translate_complex=FLAGS.translate_complex,

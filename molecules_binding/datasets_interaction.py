@@ -259,12 +259,16 @@ class VectorDataset(torch.utils.data.Dataset):
 
                     if with_coords:
                         data += [[
-                            torch.cat(
-                                [torch.as_tensor(ligand_coord * 0.1), atoms_ligand],
-                                dim=1),
-                            torch.cat(
-                                [torch.as_tensor(protein_coord * 0.1), atoms_protein],
-                                dim=1), affinity
+                            torch.cat([
+                                torch.as_tensor(ligand_coord * 0.1),
+                                atoms_ligand
+                            ],
+                                      dim=1),
+                            torch.cat([
+                                torch.as_tensor(protein_coord * 0.1),
+                                atoms_protein
+                            ],
+                                      dim=1), affinity
                         ]]
                     else:
                         data += [[atoms_ligand, atoms_protein, affinity]]
