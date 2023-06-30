@@ -13,3 +13,4 @@ mlflow
 absl-py
 ray_lightning
 scipy
+numba
