@@ -23,9 +23,9 @@ flags.DEFINE_string("path_dataset", None,
 flags.mark_flag_as_required("path_dataset")
 
 flags.DEFINE_list("learning_rates", [0.1, 0.01, 0.001, 0.0001, 0.00001],
-                  "the learning rates to try")
-
-flags.DEFINE_float("dropout_rate", 0.3, "Dropout rate")
+                  "the learning rates to experiment with")
+flags.DEFINE_list("dropout_rates", [0, 0.1, 0.2, 0.3],
+                  "the dropout rates to experiment with")
 flags.DEFINE_float("train_perc", 0.9, "percentage of train-validation-split")
 flags.DEFINE_integer("splitting_seed", 42, "Seed for splitting dataset")
 # flags.DEFINE_list("num_hidden_graph", [64, 96, 128],
@@ -56,11 +56,14 @@ def _log_parameters(**kwargs):
         mlflow.log_param(str(key), value)
 
 
-def train(config, train_dataset, val_dataset, batch_size, dropout_rate,
-          max_epochs, comment, train_perc, splitting_seed,
-          early_stopping_patience, num_workers, mlflow_server_uri, use_gpu):
+def train(config, train_dataset, val_dataset, batch_size, max_epochs, comment,
+          train_perc, splitting_seed, early_stopping_patience, num_workers,
+          mlflow_server_uri, use_gpu):
 
     learning_rate = config["learning_rate"]
+    message_passing_layers = config["message_passing_layers"]
+    fully_connected_layers = config["fully_connected_layers"]
+    dropout_rate = config["dropout_rate"]
 
     train_loader = DataLoader(train_dataset,
                               batch_size=batch_size,
@@ -70,9 +73,6 @@ def train(config, train_dataset, val_dataset, batch_size, dropout_rate,
                             batch_size=batch_size,
                             num_workers=num_workers,
                             shuffle=False)
-
-    message_passing_layers = config["message_passing_layers"]
-    fully_connected_layers = config["fully_connected_layers"]
 
     model = GraphNN(train_dataset[0].num_node_features, message_passing_layers,
                     fully_connected_layers)
@@ -169,7 +169,9 @@ def main(_):
             tune.grid_search(
                 list(
                     map(lambda x: list(map(int, x)),
-                        dim_fully_connected_layers)))
+                        dim_fully_connected_layers))),
+        "dropout_rate":
+            tune.grid_search(list(map(float, FLAGS.dropout_rates)))
     }
 
     resources_per_trial = {
@@ -182,7 +184,6 @@ def main(_):
         train_dataset=train_dataset,
         val_dataset=val_dataset,
         batch_size=FLAGS.batch_size,
-        dropout_rate=FLAGS.dropout_rate,
         max_epochs=FLAGS.max_epochs,
         comment=FLAGS.comment,
         train_perc=FLAGS.train_perc,
