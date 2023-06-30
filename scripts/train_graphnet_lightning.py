@@ -82,7 +82,7 @@ def main(_):
         generator=torch.Generator().manual_seed(FLAGS.splitting_seed))
 
     if FLAGS.comparing_with_mlp:
-        for i in len(dataset):
+        for i in range(len(dataset)):
             dataset[i].edge_attr = None
 
     if FLAGS.sanity_check_rotation:

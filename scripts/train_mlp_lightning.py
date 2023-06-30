@@ -32,6 +32,8 @@ flags.DEFINE_integer(
     "early_stopping_patience", 100,
     "How many epochs to wait for improvement before stopping.")
 
+flags.DEFINE_bool("shuffle_nodes", False, "Sanity Check: Shuffle nodes")
+
 
 def _log_parameters(**kwargs):
     for key, value in kwargs.items():
@@ -46,6 +48,10 @@ def main(_):
     train_dataset, val_dataset = torch.utils.data.random_split(
         dataset, [train_size, test_size],
         generator=torch.Generator().manual_seed(42))
+
+    if FLAGS.shuffle_nodes:
+        for i in val_dataset.indices:
+            dataset.shuffle_nodes(i)
 
     train_loader = torch.utils.data.DataLoader(train_dataset,
                                                batch_size=FLAGS.batch_size,

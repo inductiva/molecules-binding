@@ -279,6 +279,13 @@ class VectorDataset(torch.utils.data.Dataset):
             mode="constant",
             value=None)
 
-        return torch.flatten(
-            torch.cat((protein,ligand), dim = 0).float()), \
+        return [
+            torch.flatten(torch.cat((protein, ligand), dim=0).float()),
             np.float64(affinity)
+        ]
+
+    def shuffle_nodes(self, index: int) -> None:
+        protein, ligand, affinity = self.data[index]
+        protein = protein[torch.randperm(protein.shape[0])]
+        ligand = ligand[torch.randperm(ligand.shape[0])]
+        self.data[index] = [protein, ligand, affinity]
