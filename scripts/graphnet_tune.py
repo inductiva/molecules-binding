@@ -30,8 +30,6 @@ flags.DEFINE_list("weight_decays", [0, 0.0001],
                   "the weight decays to experiment with")
 flags.DEFINE_float("train_perc", 0.9, "percentage of train-validation-split")
 flags.DEFINE_integer("splitting_seed", 42, "Seed for splitting dataset")
-# flags.DEFINE_list("num_hidden_graph", [64, 96, 128],
-#                   "size of message passing layers")
 flags.DEFINE_multi_string("dim_message_passing_layers", None,
                           "try different numbers of message passing layers")
 flags.DEFINE_multi_string("dim_fully_connected_layers", None,
@@ -118,7 +116,7 @@ def train(config, train_dataset, val_dataset, batch_size, max_epochs, comment,
         callbacks = [
             loss_callback, metrics_callback, early_stopping_callback, report
         ]
-        print("callbacks created")
+
     accelerator = "gpu" if use_gpu else None
 
     trainer = Trainer(max_epochs=max_epochs,
