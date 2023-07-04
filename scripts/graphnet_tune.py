@@ -17,10 +17,6 @@ from ray import tune
 
 FLAGS = flags.FLAGS
 
-# flags.DEFINE_string("path_dataset", None,
-#                     "specify the path to the stored processed dataset")
-# flags.mark_flag_as_required("path_dataset")
-
 flags.DEFINE_list("paths_dataset", None, "specify the path to the datasets")
 
 flags.DEFINE_list("learning_rates", [0.1, 0.01, 0.001, 0.0001, 0.00001],
