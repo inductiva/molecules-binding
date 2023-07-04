@@ -14,13 +14,14 @@ import mlflow
 import ray
 from ray.tune.integration.pytorch_lightning import TuneReportCallback
 from ray import tune
-import random
 
 FLAGS = flags.FLAGS
 
-flags.DEFINE_string("path_dataset", None,
-                    "specify the path to the stored processed dataset")
-flags.mark_flag_as_required("path_dataset")
+# flags.DEFINE_string("path_dataset", None,
+#                     "specify the path to the stored processed dataset")
+# flags.mark_flag_as_required("path_dataset")
+
+flags.DEFINE_list("paths_dataset", None, "specify the path to the datasets")
 
 flags.DEFINE_list("learning_rates", [0.1, 0.01, 0.001, 0.0001, 0.00001],
                   "the learning rates to experiment with")
@@ -28,7 +29,7 @@ flags.DEFINE_list("dropout_rates", [0, 0.1, 0.2, 0.3],
                   "the dropout rates to experiment with")
 flags.DEFINE_list("weight_decays", [0, 0.0001],
                   "the weight decays to experiment with")
-flags.DEFINE_float("train_perc", 0.9, "percentage of train-validation-split")
+flags.DEFINE_float("train_split", 0.9, "percentage of train-validation-split")
 flags.DEFINE_integer("splitting_seed", 42, "Seed for splitting dataset")
 flags.DEFINE_multi_string("dim_message_passing_layers", None,
                           "try different numbers of message passing layers")
@@ -56,15 +57,23 @@ def _log_parameters(**kwargs):
         mlflow.log_param(str(key), value)
 
 
-def train(config, train_dataset, val_dataset, batch_size, max_epochs, comment,
-          train_perc, splitting_seed, early_stopping_patience, num_workers,
-          mlflow_server_uri, use_gpu):
+def train(config, batch_size, max_epochs, comment, train_split, splitting_seed,
+          early_stopping_patience, num_workers, mlflow_server_uri, use_gpu):
 
     learning_rate = config["learning_rate"]
     message_passing_layers = config["message_passing_layers"]
     fully_connected_layers = config["fully_connected_layers"]
     dropout_rate = config["dropout_rate"]
     weight_decay = config["weight_decay"]
+    path_dataset = config["path_dataset"]
+
+    dataset = torch.load(path_dataset)
+    train_size = int(train_split * len(dataset))
+    test_size = len(dataset) - train_size
+
+    train_dataset, val_dataset = torch.utils.data.random_split(
+        dataset, [train_size, test_size],
+        generator=torch.Generator().manual_seed(splitting_seed))
 
     train_loader = DataLoader(train_dataset,
                               batch_size=batch_size,
@@ -88,13 +97,14 @@ def train(config, train_dataset, val_dataset, batch_size, max_epochs, comment,
     mlflow.set_experiment("molecules_binding")
 
     with mlflow.start_run():
-        _log_parameters(batch_size=batch_size,
+        _log_parameters(path_dataset=path_dataset,
+                        batch_size=batch_size,
                         learning_rate=learning_rate,
                         dropout_rate=dropout_rate,
                         message_passing_layers=message_passing_layers,
                         fully_connected_layers=fully_connected_layers,
                         comment=comment,
-                        data_split=train_perc,
+                        data_split=train_split,
                         num_node_features=train_dataset[0].num_node_features,
                         num_edge_features=train_dataset[0].num_edge_features,
                         early_stopping_patience=early_stopping_patience,
@@ -130,23 +140,6 @@ def train(config, train_dataset, val_dataset, batch_size, max_epochs, comment,
 
 
 def main(_):
-    dataset = torch.load(FLAGS.path_dataset)
-    train_size = int(FLAGS.train_perc * len(dataset))
-    test_size = len(dataset) - train_size
-
-    # Sanity Check : Shuffling labels
-    if FLAGS.shuffle:
-        random.seed(FLAGS.shuffling_seed)
-        labels = [data.y for data in dataset]
-        labels_shuffled = labels.copy()
-        random.shuffle(labels_shuffled)
-
-        for i in range(len(dataset)):
-            dataset[i].y = labels_shuffled[i]
-
-    train_dataset, val_dataset = torch.utils.data.random_split(
-        dataset, [train_size, test_size],
-        generator=torch.Generator().manual_seed(FLAGS.splitting_seed))
 
     dim_message_passing_layers = [
         list(map(int, message_passing_layers.split(" ")))
@@ -174,7 +167,9 @@ def main(_):
         "dropout_rate":
             tune.grid_search(list(map(float, FLAGS.dropout_rates))),
         "weight_decay":
-            tune.grid_search(list(map(float, FLAGS.weight_decays)))
+            tune.grid_search(list(map(float, FLAGS.weight_decays))),
+        "path_dataset":
+            tune.grid_search(list(map(str, FLAGS.paths_dataset)))
     }
 
     resources_per_trial = {
@@ -184,12 +179,10 @@ def main(_):
 
     trainable = tune.with_parameters(
         train,
-        train_dataset=train_dataset,
-        val_dataset=val_dataset,
         batch_size=FLAGS.batch_size,
         max_epochs=FLAGS.max_epochs,
         comment=FLAGS.comment,
-        train_perc=FLAGS.train_perc,
+        train_split=FLAGS.train_split,
         splitting_seed=FLAGS.splitting_seed,
         early_stopping_patience=FLAGS.early_stopping_patience,
         num_workers=FLAGS.num_workers,
