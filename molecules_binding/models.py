@@ -44,11 +44,14 @@ class GraphNN(nn.Module):
         graph_layer_sizes = [num_node_features] + layer_sizes_graph
         graph_layers = []
         pairs_graph = list(zip(graph_layer_sizes, graph_layer_sizes[1:]))
+        batch_norm_layers = []
 
         for ins, outs in pairs_graph:
             graph_layers.append(GATConv(ins, outs))
+            batch_norm_layers.append(nn.BatchNorm1d(outs))
 
         self.graph_layers = nn.ModuleList(graph_layers)
+        self.batch_norm_layers = nn.ModuleList(batch_norm_layers)
 
         linear_layer_sizes = [layer_sizes_graph[-1]] + layer_sizes_linear
         linear_layers = []
@@ -66,8 +69,9 @@ class GraphNN(nn.Module):
         """
         x, edge_index, edge_attrs = data.x, data.edge_index, data.edge_attr
 
-        for layer in self.graph_layers:
+        for i, layer in enumerate(self.graph_layers):
             x = layer(x, edge_index, edge_attrs)
+            x = self.batch_norm_layers[i](x)
             x = nn.ReLU()(x)
 
         x = global_mean_pool(x, batch)
