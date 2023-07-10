@@ -17,7 +17,7 @@ class GraphNNLightning(pl.LightningModule):
     """
 
     def __init__(self, model, learning_rate, batch_size, dropout_rate,
-                 weight_decay):
+                 weight_decay, use_batch_norm):
         super().__init__()
 
         self.model = model
@@ -26,10 +26,12 @@ class GraphNNLightning(pl.LightningModule):
         self.dropout_rate = dropout_rate
         self.criterion = torch.nn.MSELoss()
         self.weight_decay = weight_decay
+        self.use_batch_norm = use_batch_norm
 
     def compute_statistics(self, data, training):
         labels = data.y
-        outputs = self.model(data, data.batch, self.dropout_rate).squeeze()
+        outputs = self.model(data, data.batch, self.dropout_rate,
+                             self.use_batch_norm).squeeze()
 
         if training:
             loss = self.criterion(labels, outputs)

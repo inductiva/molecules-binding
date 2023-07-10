@@ -46,6 +46,7 @@ flags.DEFINE_integer(
     "How many epochs to wait for improvement before stopping.")
 flags.DEFINE_boolean("shuffle", False, "Sanity Check: Shuffle labels")
 flags.DEFINE_integer("shuffling_seed", 42, "Seed for shuffling labels")
+flags.DEFINE_boolean("use_batch_norm", False, "Use batch normalization")
 
 
 def _log_parameters(**kwargs):
@@ -54,7 +55,8 @@ def _log_parameters(**kwargs):
 
 
 def train(config, batch_size, max_epochs, comment, train_split, splitting_seed,
-          early_stopping_patience, num_workers, mlflow_server_uri, use_gpu):
+          early_stopping_patience, num_workers, mlflow_server_uri, use_gpu,
+          use_batch_norm):
 
     learning_rate = config["learning_rate"]
     message_passing_layers = config["message_passing_layers"]
@@ -84,7 +86,8 @@ def train(config, batch_size, max_epochs, comment, train_split, splitting_seed,
                     fully_connected_layers)
     model.double()
     lightning_model = GraphNNLightning(model, learning_rate, batch_size,
-                                       dropout_rate, weight_decay)
+                                       dropout_rate, weight_decay,
+                                       use_batch_norm)
 
     # Log training parameters to mlflow.
     if mlflow_server_uri is not None:
@@ -105,7 +108,10 @@ def train(config, batch_size, max_epochs, comment, train_split, splitting_seed,
                         num_edge_features=train_dataset[0].num_edge_features,
                         early_stopping_patience=early_stopping_patience,
                         dataset_size=len(train_dataset) + len(val_dataset),
-                        splitting_seed=splitting_seed)
+                        splitting_seed=splitting_seed,
+                        weight_decay=weight_decay,
+                        max_epochs=max_epochs,
+                        use_batch_norm=use_batch_norm)
 
         run_id = mlflow.active_run().info.run_id
         loss_callback = LossMonitor(run_id)
@@ -183,7 +189,8 @@ def main(_):
         early_stopping_patience=FLAGS.early_stopping_patience,
         num_workers=FLAGS.num_workers,
         mlflow_server_uri=FLAGS.mlflow_server_uri,
-        use_gpu=FLAGS.use_gpu)
+        use_gpu=FLAGS.use_gpu,
+        use_batch_norm=FLAGS.use_batch_norm)
 
     ray.init()
     tune.run(trainable,

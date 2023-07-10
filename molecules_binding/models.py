@@ -62,17 +62,22 @@ class GraphNN(nn.Module):
         self.linear_layers = nn.ModuleList(linear_layers)
         self.last_layer = nn.Linear(linear_layer_sizes[-1], 1)
 
-    def forward(self, data, batch, dropout_rate):
+    def forward(self, data, batch, dropout_rate, use_batch_norm):
         """
         Returns:
             x (float): affinity of the graph
         """
         x, edge_index, edge_attrs = data.x, data.edge_index, data.edge_attr
 
-        for i, layer in enumerate(self.graph_layers):
-            x = layer(x, edge_index, edge_attrs)
-            x = self.batch_norm_layers[i](x)
-            x = nn.ReLU()(x)
+        if use_batch_norm:
+            for i, layer in enumerate(self.graph_layers):
+                x = layer(x, edge_index, edge_attrs)
+                x = self.batch_norm_layers[i](x)
+                x = nn.ReLU()(x)
+        else:
+            for layer in self.graph_layers:
+                x = layer(x, edge_index, edge_attrs)
+                x = nn.ReLU()(x)
 
         x = global_mean_pool(x, batch)
 

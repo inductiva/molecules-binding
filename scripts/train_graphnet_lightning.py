@@ -54,6 +54,7 @@ flags.DEFINE_bool("shuffle_nodes", False, "Sanity Check: Shuffle nodes")
 flags.DEFINE_bool("remove_coords", False,
                   "remove coordinates of nodes, only for old dataset")
 flags.DEFINE_float("weight_decay", 0, "value of weight decay")
+flags.DEFINE_bool("use_batch_norm", False, "use batch norm")
 
 
 def _log_parameters(**kwargs):
@@ -122,7 +123,7 @@ def main(_):
 
     lightning_model = GraphNNLightning(model, FLAGS.learning_rate,
                                        FLAGS.batch_size, FLAGS.dropout_rate,
-                                       FLAGS.weight_decay)
+                                       FLAGS.weight_decay, FLAGS.use_batch_norm)
 
     # Log training parameters to mlflow.
     if FLAGS.mlflow_server_uri is not None:
@@ -148,7 +149,8 @@ def main(_):
                         dataset=str(FLAGS.path_dataset),
                         shuffle_nodes=FLAGS.shuffle_nodes,
                         remove_coords=FLAGS.remove_coords,
-                        comparing_with_mlp=FLAGS.comparing_with_mlp)
+                        comparing_with_mlp=FLAGS.comparing_with_mlp,
+                        use_batch_norm=FLAGS.use_batch_norm)
 
         run_id = mlflow.active_run().info.run_id
         loss_callback = LossMonitor(run_id)
