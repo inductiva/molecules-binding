@@ -14,6 +14,7 @@ import mlflow
 from ray_lightning import RayStrategy
 import ray
 import random
+import inductiva_ml
 
 FLAGS = flags.FLAGS
 
@@ -153,13 +154,17 @@ def main(_):
         run_id = mlflow.active_run().info.run_id
         loss_callback = LossMonitor(run_id)
         metrics_callback = MetricsMonitor(run_id)
+        gpu_usage_callback = inductiva_ml.callbacks.GPUUsage(run_id)
         # Early stopping.
         early_stopping_callback = EarlyStopping(
             monitor="val_loss",
             min_delta=0,
             patience=FLAGS.early_stopping_patience,
             mode="min")
-        callbacks = [loss_callback, metrics_callback, early_stopping_callback]
+        callbacks = [
+            loss_callback, metrics_callback, early_stopping_callback,
+            gpu_usage_callback
+        ]
 
     if FLAGS.use_ray:
         ray.init()
