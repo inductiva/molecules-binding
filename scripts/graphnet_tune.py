@@ -14,6 +14,7 @@ import mlflow
 import ray
 from ray.tune.integration.pytorch_lightning import TuneReportCallback
 from ray import tune
+import inductiva_ml
 
 FLAGS = flags.FLAGS
 
@@ -110,6 +111,7 @@ def train(config, batch_size, max_epochs, comment, train_split, splitting_seed,
         run_id = mlflow.active_run().info.run_id
         loss_callback = LossMonitor(run_id)
         metrics_callback = MetricsMonitor(run_id)
+        gpu_usage_callback = inductiva_ml.callbacks.GPUUsage(run_id)
         # Early stopping.
         early_stopping_callback = EarlyStopping(
             monitor="val_loss",
@@ -120,7 +122,8 @@ def train(config, batch_size, max_epochs, comment, train_split, splitting_seed,
         report = TuneReportCallback(["loss", "val_loss"], on="validation_end")
 
         callbacks = [
-            loss_callback, metrics_callback, early_stopping_callback, report
+            loss_callback, metrics_callback, early_stopping_callback, report,
+            gpu_usage_callback
         ]
 
     accelerator = "gpu" if use_gpu else None

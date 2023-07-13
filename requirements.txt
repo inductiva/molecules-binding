@@ -14,3 +14,4 @@ absl-py
 ray_lightning
 scipy
 numba
+gputil
