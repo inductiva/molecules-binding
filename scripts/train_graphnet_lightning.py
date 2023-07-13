@@ -54,7 +54,7 @@ flags.DEFINE_bool("shuffle_nodes", False, "Sanity Check: Shuffle nodes")
 flags.DEFINE_bool("remove_coords", False,
                   "remove coordinates of nodes, only for old dataset")
 flags.DEFINE_float("weight_decay", 0, "value of weight decay")
-flags.DEFINE_bool("use_batch_norm", False, "use batch norm")
+flags.DEFINE_bool("use_batch_norm", True, "use batch norm")
 
 
 def _log_parameters(**kwargs):
