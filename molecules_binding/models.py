@@ -44,40 +44,58 @@ class GraphNN(nn.Module):
         graph_layer_sizes = [num_node_features] + layer_sizes_graph
         graph_layers = []
         pairs_graph = list(zip(graph_layer_sizes, graph_layer_sizes[1:]))
+        batch_norm_layers = []
 
         for ins, outs in pairs_graph:
             graph_layers.append(GATConv(ins, outs))
+            batch_norm_layers.append(nn.BatchNorm1d(outs))
 
         self.graph_layers = nn.ModuleList(graph_layers)
+        self.batch_norm_layers = nn.ModuleList(batch_norm_layers)
 
         linear_layer_sizes = [layer_sizes_graph[-1]] + layer_sizes_linear
         linear_layers = []
         pairs_linear = list(zip(linear_layer_sizes, linear_layer_sizes[1:]))
+        batch_norm_linear_layers = []
         for ins, outs in pairs_linear:
             linear_layers.append(nn.Linear(ins, outs))
+            batch_norm_linear_layers.append(nn.BatchNorm1d(outs))
 
         self.linear_layers = nn.ModuleList(linear_layers)
+        self.batch_norm_linear_layers = nn.ModuleList(batch_norm_linear_layers)
         self.last_layer = nn.Linear(linear_layer_sizes[-1], 1)
 
-    def forward(self, data, batch, dropout_rate):
+    def forward(self, data, batch, dropout_rate, use_batch_norm):
         """
         Returns:
             x (float): affinity of the graph
         """
         x, edge_index, edge_attrs = data.x, data.edge_index, data.edge_attr
 
-        for layer in self.graph_layers:
-            x = layer(x, edge_index, edge_attrs)
-            x = nn.ReLU()(x)
+        if use_batch_norm:
+            for i, layer in enumerate(self.graph_layers):
+                x = layer(x, edge_index, edge_attrs)
+                x = self.batch_norm_layers[i](x)
+                x = nn.ReLU()(x)
+        else:
+            for layer in self.graph_layers:
+                x = layer(x, edge_index, edge_attrs)
+                x = nn.ReLU()(x)
 
         x = global_mean_pool(x, batch)
-
         x = F.dropout(x, p=dropout_rate, training=self.training)
 
-        for layer in self.linear_layers:
-            x = layer(x)
-            x = nn.ReLU()(x)
-            x = F.dropout(x, p=dropout_rate, training=self.training)
+        if use_batch_norm:
+            for i, layer in enumerate(self.linear_layers):
+                x = layer(x)
+                x = self.batch_norm_linear_layers[i](x)
+                x = nn.ReLU()(x)
+                x = F.dropout(x, p=dropout_rate, training=self.training)
+        else:
+            for layer in self.linear_layers:
+                x = layer(x)
+                x = nn.ReLU()(x)
+                x = F.dropout(x, p=dropout_rate, training=self.training)
 
         x = self.last_layer(x)
 
