@@ -30,8 +30,7 @@ class GraphNNLightning(pl.LightningModule):
 
     def compute_statistics(self, data, training):
         labels = data.y
-        outputs = self.model(data, data.batch, self.dropout_rate,
-                             self.use_batch_norm).squeeze()
+        outputs = self.model(data, data.batch, self.dropout_rate).squeeze()
 
         if training:
             loss = self.criterion(labels, outputs)
