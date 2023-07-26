@@ -26,6 +26,10 @@ flags.DEFINE_list("dropout_rates", [0, 0.1, 0.2, 0.3],
                   "the dropout rates to experiment with")
 flags.DEFINE_list("weight_decays", [0, 0.0001],
                   "the weight decays to experiment with")
+flags.DEFINE_multi_string("dim_embedding_layers", None,
+                          "try different numbers of embedding layers")
+flags.DEFINE_bool("use_message_passing", True,
+                  "If set to False, this is the MLP benchmark test")
 flags.DEFINE_float("train_split", 0.9, "percentage of train-validation-split")
 flags.DEFINE_integer("splitting_seed", 42, "Seed for splitting dataset")
 flags.DEFINE_multi_string("dim_message_passing_layers", None,
@@ -57,11 +61,12 @@ def _log_parameters(**kwargs):
 
 def train(config, batch_size, max_epochs, comment, train_split, splitting_seed,
           early_stopping_patience, num_workers, mlflow_server_uri, use_gpu,
-          use_batch_norm):
+          use_batch_norm, use_message_passing):
 
     learning_rate = config["learning_rate"]
     message_passing_layers = config["message_passing_layers"]
     fully_connected_layers = config["fully_connected_layers"]
+    embedding_layers = config["embedding_layers"]
     dropout_rate = config["dropout_rate"]
     weight_decay = config["weight_decay"]
     path_dataset = config["path_dataset"]
@@ -84,11 +89,12 @@ def train(config, batch_size, max_epochs, comment, train_split, splitting_seed,
                             shuffle=False)
 
     model = GraphNN(train_dataset[0].num_node_features, message_passing_layers,
-                    fully_connected_layers)
+                    fully_connected_layers, use_batch_norm, dropout_rate,
+                    embedding_layers)
     model.double()
     lightning_model = GraphNNLightning(model, learning_rate, batch_size,
                                        dropout_rate, weight_decay,
-                                       use_batch_norm)
+                                       use_message_passing)
 
     # Log training parameters to mlflow.
     if mlflow_server_uri is not None:
@@ -103,6 +109,8 @@ def train(config, batch_size, max_epochs, comment, train_split, splitting_seed,
                         dropout_rate=dropout_rate,
                         message_passing_layers=message_passing_layers,
                         fully_connected_layers=fully_connected_layers,
+                        embedding_layers=embedding_layers,
+                        use_message_passing=use_message_passing,
                         comment=comment,
                         data_split=train_split,
                         num_node_features=train_dataset[0].num_node_features,
@@ -156,6 +164,11 @@ def main(_):
         for fully_connected_layers in FLAGS.dim_fully_connected_layers
     ]
 
+    dim_embedding_layers = [
+        list(map(int, embedding_layers.split(" ")))
+        for embedding_layers in FLAGS.dim_embedding_layers
+    ]
+
     config = {
         "learning_rate":
             tune.grid_search(list(map(float, FLAGS.learning_rates))),
@@ -169,6 +182,9 @@ def main(_):
                 list(
                     map(lambda x: list(map(int, x)),
                         dim_fully_connected_layers))),
+        "embedding_layers":
+            tune.grid_search(
+                list(map(lambda x: list(map(int, x)), dim_embedding_layers))),
         "dropout_rate":
             tune.grid_search(list(map(float, FLAGS.dropout_rates))),
         "weight_decay":
@@ -193,7 +209,8 @@ def main(_):
         num_workers=FLAGS.num_workers,
         mlflow_server_uri=FLAGS.mlflow_server_uri,
         use_gpu=FLAGS.use_gpu,
-        use_batch_norm=FLAGS.use_batch_norm)
+        use_batch_norm=FLAGS.use_batch_norm,
+        use_message_passing=FLAGS.use_message_passing)
 
     ray.init()
     tune.run(trainable,

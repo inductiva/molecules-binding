@@ -39,8 +39,7 @@ class GraphNN(nn.Module):
     """
 
     def __init__(self, num_node_features, layer_sizes_graph, layer_sizes_linear,
-                 use_batch_norm, dropout_rate, use_node_embedding,
-                 embedding_layers):
+                 use_batch_norm, dropout_rate, embedding_layers):
         """
         Parameters:
             hidden_channels (int): Number of features for each node
@@ -50,7 +49,7 @@ class GraphNN(nn.Module):
         graph_layer_sizes = [num_node_features] + layer_sizes_graph
         self.embedding = nn.Identity()
 
-        if use_node_embedding:
+        if embedding_layers is not None:
             self.embedding = MLP(num_node_features, embedding_layers[:-1],
                                  embedding_layers[-1], use_batch_norm,
                                  dropout_rate)
