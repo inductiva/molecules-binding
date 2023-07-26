@@ -23,6 +23,11 @@ flags.DEFINE_string("path_dataset", None,
 flags.mark_flag_as_required("path_dataset")
 flags.DEFINE_float("learning_rate", 0.001, "learning rate")
 flags.DEFINE_float("dropout_rate", 0.3, "Dropout rate")
+flags.DEFINE_list(
+    "embedding_layers", None, "set to None if not using embedding,"
+    "else specify the size of embedding layers")
+flags.DEFINE_bool("use_message_passing", True,
+                  "If set to False, this is the MLP benchmark test")
 flags.DEFINE_float("train_split", 0.9, "percentage of train-validation-split")
 flags.DEFINE_integer("splitting_seed", 42, "Seed for splitting dataset")
 flags.DEFINE_list("num_hidden_graph", [64, 96, 128],
@@ -118,13 +123,20 @@ def main(_):
 
     graph_layer_sizes = list(map(int, FLAGS.num_hidden_graph))
     linear_layer_sizes = list(map(int, FLAGS.num_hidden_linear))
+    if FLAGS.embedding_layers is None:
+        embedding_layer_sizes = None
+    else:
+        embedding_layer_sizes = list(map(int, FLAGS.embedding_layers))
+
     model = GraphNN(dataset[0].num_node_features, graph_layer_sizes,
-                    linear_layer_sizes)
+                    linear_layer_sizes, FLAGS.use_batch_norm,
+                    FLAGS.dropout_rate, embedding_layer_sizes)
     model.double()
 
     lightning_model = GraphNNLightning(model, FLAGS.learning_rate,
                                        FLAGS.batch_size, FLAGS.dropout_rate,
-                                       FLAGS.weight_decay, FLAGS.use_batch_norm)
+                                       FLAGS.weight_decay,
+                                       FLAGS.use_message_passing)
 
     # Log training parameters to mlflow.
     if FLAGS.mlflow_server_uri is not None:
@@ -138,6 +150,8 @@ def main(_):
                         learning_rate=FLAGS.learning_rate,
                         dropout_rate=FLAGS.dropout_rate,
                         weight_decay=FLAGS.weight_decay,
+                        embedding_layers=FLAGS.embedding_layers,
+                        use_message_passing=FLAGS.use_message_passing,
                         num_hidden_graph=FLAGS.num_hidden_graph,
                         num_hidden_linear=FLAGS.num_hidden_linear,
                         comment=FLAGS.comment,

@@ -17,8 +17,10 @@ flags.DEFINE_string("path_dataset", None,
                     "specify the path to the stored processed dataset")
 flags.mark_flag_as_required("path_dataset")
 flags.DEFINE_float("learning_rate", 0.001, "Learning rate")
-flags.DEFINE_float("dropout_rate", 0.3, "Dropout rate")
+flags.DEFINE_float("dropout_rate", 0.1, "Dropout rate")
 flags.DEFINE_float("weight_decay", 0, "Weight decay")
+flags.DEFINE_bool("use_batch_norm", False,
+                  "True if using batch norm, False if not")
 flags.DEFINE_multi_integer("num_hidden", [128, 128],
                            "size of the new features after conv layer")
 flags.DEFINE_float("train_split", 0.8, "percentage of train-validation-split")
@@ -27,7 +29,7 @@ flags.DEFINE_integer("batch_size", 32, "batch size")
 flags.DEFINE_integer("max_epochs", 100, "number of epochs")
 flags.DEFINE_integer("num_workers", 12, "number of workers")
 flags.DEFINE_bool("use_gpu", True, "True if using gpu, False if not")
-flags.DEFINE_string("add_comment", None, "Add a comment to the experiment.")
+flags.DEFINE_string("comment", None, "Add a comment to the experiment.")
 flags.DEFINE_string("mlflow_server_uri", None,
                     "Tracking uri for mlflow experiments.")
 flags.DEFINE_integer(
@@ -74,7 +76,8 @@ def main(_):
                                              shuffle=False)
 
     layer_sizes = list(map(int, FLAGS.num_hidden))
-    model = MLP(len(dataset[0][0]), layer_sizes, 1)
+    model = MLP(len(dataset[0][0]), layer_sizes, 1, FLAGS.use_batch_norm,
+                FLAGS.dropout_rate)
     model.double()
 
     lightning_model = MLPLightning(model, FLAGS.learning_rate,
@@ -91,8 +94,9 @@ def main(_):
                         batch_size=FLAGS.batch_size,
                         learning_rate=FLAGS.learning_rate,
                         weight_decay=FLAGS.weight_decay,
+                        use_batch_norm=FLAGS.use_batch_norm,
                         num_hidden=FLAGS.num_hidden,
-                        comment=FLAGS.add_comment,
+                        comment=FLAGS.comment,
                         first_layer_size=len(dataset[0][0]),
                         early_stopping_patience=FLAGS.early_stopping_patience,
                         data_split=FLAGS.train_split,
