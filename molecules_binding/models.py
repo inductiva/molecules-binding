@@ -46,14 +46,15 @@ class GraphNN(nn.Module):
             num_node_features (int): Initial number of node features
         """
         super().__init__()
-        graph_layer_sizes = [num_node_features] + layer_sizes_graph
-        self.embedding = nn.Identity()
 
-        if embedding_layers is not None:
+        if embedding_layers is None:
+            self.embedding = nn.Identity()
+            graph_layer_sizes = [num_node_features] + layer_sizes_graph
+        else:
             self.embedding = MLP(num_node_features, embedding_layers[:-1],
                                  embedding_layers[-1], use_batch_norm,
                                  dropout_rate)
-            graph_layer_sizes[0] = embedding_layers[-1]
+            graph_layer_sizes = [embedding_layers[-1]] + layer_sizes_graph
 
         graph_layers = []
         pairs_graph = list(zip(graph_layer_sizes, graph_layer_sizes[1:]))
