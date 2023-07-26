@@ -50,7 +50,7 @@ def main(_):
     graph_layer_sizes = list(map(int, FLAGS.num_hidden_graph))
     linear_layer_sizes = list(map(int, FLAGS.num_hidden_linear))
     model = GraphNN(dataset[0].num_node_features, graph_layer_sizes,
-                    linear_layer_sizes, False, 0.0, None)
+                    linear_layer_sizes, False, 0.0, None, 1)
     model.load_state_dict(torch.load("../../resultados01/model"))
     model = model.to(device)
     model = model.to(float)
