@@ -24,8 +24,7 @@ flags.mark_flag_as_required("path_dataset")
 flags.DEFINE_float("learning_rate", 0.001, "learning rate")
 flags.DEFINE_float("dropout_rate", 0.3, "Dropout rate")
 flags.DEFINE_list(
-    "embedding_layers", None,
-    """set to None if not using embedding,
+    "embedding_layers", None, """set to None if not using embedding,
     else specify the size of embedding layers""")
 flags.DEFINE_bool("use_message_passing", True,
                   "If set to False, this is the MLP benchmark test")
