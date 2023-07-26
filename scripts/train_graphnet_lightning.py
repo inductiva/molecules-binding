@@ -28,7 +28,7 @@ flags.DEFINE_list(
     "else specify the size of embedding layers")
 flags.DEFINE_bool("use_message_passing", True,
                   "If set to False, this is the MLP benchmark test")
-flags.DEFINE_integer("attention_heads", 1, "Number of attention heads")
+flags.DEFINE_integer("n_attention_heads", 1, "Number of attention heads")
 flags.DEFINE_float("train_split", 0.9, "percentage of train-validation-split")
 flags.DEFINE_integer("splitting_seed", 42, "Seed for splitting dataset")
 flags.DEFINE_list("num_hidden_graph", [64, 96, 128],
@@ -132,7 +132,7 @@ def main(_):
     model = GraphNN(dataset[0].num_node_features, graph_layer_sizes,
                     linear_layer_sizes, FLAGS.use_batch_norm,
                     FLAGS.dropout_rate, embedding_layer_sizes,
-                    FLAGS.attention_heads)
+                    FLAGS.n_attention_heads)
     model.double()
 
     lightning_model = GraphNNLightning(model, FLAGS.learning_rate,
@@ -154,7 +154,7 @@ def main(_):
                         weight_decay=FLAGS.weight_decay,
                         embedding_layers=FLAGS.embedding_layers,
                         use_message_passing=FLAGS.use_message_passing,
-                        attention_heads=FLAGS.attention_heads,
+                        n_attention_heads=FLAGS.n_attention_heads,
                         num_hidden_graph=FLAGS.num_hidden_graph,
                         num_hidden_linear=FLAGS.num_hidden_linear,
                         comment=FLAGS.comment,

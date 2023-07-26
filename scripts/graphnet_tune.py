@@ -30,7 +30,7 @@ flags.DEFINE_multi_string("dim_embedding_layers", None,
                           "try different numbers of embedding layers")
 flags.DEFINE_bool("use_message_passing", True,
                   "If set to False, this is the MLP benchmark test")
-flags.DEFINE_list("attention_heads", [1],
+flags.DEFINE_list("n_attention_heads", [1],
                   "Number of attention heads to experiment with")
 flags.DEFINE_float("train_split", 0.9, "percentage of train-validation-split")
 flags.DEFINE_integer("splitting_seed", 42, "Seed for splitting dataset")
@@ -72,7 +72,7 @@ def train(config, batch_size, max_epochs, comment, train_split, splitting_seed,
     dropout_rate = config["dropout_rate"]
     weight_decay = config["weight_decay"]
     path_dataset = config["path_dataset"]
-    attention_head = config["attention_head"]
+    n_attention_head = config["n_attention_head"]
 
     dataset = torch.load(path_dataset)
     train_size = int(train_split * len(dataset))
@@ -93,7 +93,7 @@ def train(config, batch_size, max_epochs, comment, train_split, splitting_seed,
 
     model = GraphNN(train_dataset[0].num_node_features, message_passing_layers,
                     fully_connected_layers, use_batch_norm, dropout_rate,
-                    embedding_layers, attention_head)
+                    embedding_layers, n_attention_head)
     model.double()
     lightning_model = GraphNNLightning(model, learning_rate, batch_size,
                                        dropout_rate, weight_decay,
@@ -110,7 +110,7 @@ def train(config, batch_size, max_epochs, comment, train_split, splitting_seed,
                         batch_size=batch_size,
                         learning_rate=learning_rate,
                         dropout_rate=dropout_rate,
-                        attention_head=attention_head,
+                        n_attention_head=n_attention_head,
                         message_passing_layers=message_passing_layers,
                         fully_connected_layers=fully_connected_layers,
                         embedding_layers=embedding_layers,
@@ -193,8 +193,8 @@ def main(_):
             tune.grid_search(list(map(float, FLAGS.dropout_rates))),
         "weight_decay":
             tune.grid_search(list(map(float, FLAGS.weight_decays))),
-        "attention_head":
-            tune.grid_search(list(map(int, FLAGS.attention_heads))),
+        "n_attention_head":
+            tune.grid_search(list(map(int, FLAGS.n_attention_heads))),
         "path_dataset":
             tune.grid_search(list(map(str, FLAGS.paths_dataset)))
     }

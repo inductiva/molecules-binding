@@ -40,7 +40,7 @@ class GraphNN(nn.Module):
 
     def __init__(self, num_node_features, layer_sizes_graph, layer_sizes_linear,
                  use_batch_norm, dropout_rate, embedding_layers,
-                 attention_heads):
+                 n_attention_heads):
         """
         Parameters:
             hidden_channels (int): Number of features for each node
@@ -63,7 +63,7 @@ class GraphNN(nn.Module):
 
         for ins, outs in pairs_graph:
             graph_layers.append(
-                GATConv(ins, outs, heads=attention_heads, concat=False))
+                GATConv(ins, outs, heads=n_attention_heads, concat=False))
             if use_batch_norm:
                 batch_norm_layers.append(nn.BatchNorm1d(outs))
             else:
