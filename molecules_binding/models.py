@@ -74,7 +74,7 @@ class GraphNN(nn.Module):
         self.final_mlp = MLP(layer_sizes_graph[-1], layer_sizes_linear, 1,
                              use_batch_norm, dropout_rate)
 
-    def forward(self, data, batch, dropout_rate):
+    def forward(self, data, batch, dropout_rate, use_message_passing):
         """
         Returns:
             x (float): affinity of the graph
@@ -83,11 +83,12 @@ class GraphNN(nn.Module):
 
         x = self.embedding(x)
 
-        for i, layer in enumerate(self.graph_layers):
-            x = layer(x, edge_index, edge_attrs)
-            x = self.batch_norm_layers[i](x)
-            x = self.activation(x)
-            x = F.dropout(x, p=dropout_rate, training=self.training)
+        if use_message_passing:
+            for i, layer in enumerate(self.graph_layers):
+                x = layer(x, edge_index, edge_attrs)
+                x = self.batch_norm_layers[i](x)
+                x = self.activation(x)
+                x = F.dropout(x, p=dropout_rate, training=self.training)
 
         x = global_mean_pool(x, batch)
         x = F.dropout(x, p=dropout_rate, training=self.training)
