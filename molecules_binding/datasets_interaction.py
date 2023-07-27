@@ -196,8 +196,9 @@ class GraphDataset(Dataset):
         self.data_list = data_list
         self.dataset_len = len(data_list)
 
+    # Carefull here
     def __len__(self):
-        return self.dataset_len
+        return len(self.data_list)
 
     def __getitem__(self, index):
         return self.data_list[index]
@@ -214,6 +215,10 @@ class GraphDataset(Dataset):
     def translate_coords(self, index, translation) -> None:
         data = self.data_list[index]
         data.pos += translation
+
+    # carefull here
+    def remove_graph(self, index):
+        del self.data_list[index]
 
 
 class VectorDataset(torch.utils.data.Dataset):

@@ -2,7 +2,8 @@
 Lightning Code
 """
 import torch
-from molecules_binding.models import GraphNN
+# from molecules_binding.models import GraphNN
+from molecules_binding.models import NodeEdgeGNN
 from molecules_binding.callbacks import LossMonitor, MetricsMonitor
 from molecules_binding.lightning_wrapper import GraphNNLightning
 from torch_geometric.loader import DataLoader
@@ -71,6 +72,11 @@ def _log_parameters(**kwargs):
 
 def main(_):
     dataset = torch.load(FLAGS.path_dataset)
+
+    for graph in dataset:
+        if torch.isnan(graph.edge_attr).any():
+            dataset.remove_graph(dataset.data_list.index(graph))
+
     train_size = int(FLAGS.train_split * len(dataset))
     test_size = len(dataset) - train_size
 
@@ -129,10 +135,15 @@ def main(_):
     else:
         embedding_layer_sizes = list(map(int, FLAGS.embedding_layers))
 
-    model = GraphNN(dataset[0].num_node_features, graph_layer_sizes,
-                    linear_layer_sizes, FLAGS.use_batch_norm,
-                    FLAGS.dropout_rate, embedding_layer_sizes,
-                    FLAGS.n_attention_heads)
+    # model = GraphNN(dataset[0].num_node_features, graph_layer_sizes,
+    #                 linear_layer_sizes, FLAGS.use_batch_norm,
+    #                 FLAGS.dropout_rate, embedding_layer_sizes,
+    #                 FLAGS.n_attention_heads)
+    model = NodeEdgeGNN(dataset[0].num_node_features,
+                        dataset[0].num_edge_features, linear_layer_sizes,
+                        FLAGS.use_batch_norm, FLAGS.dropout_rate,
+                        embedding_layer_sizes, 128, 3)
+
     model.double()
 
     lightning_model = GraphNNLightning(model, FLAGS.learning_rate,
