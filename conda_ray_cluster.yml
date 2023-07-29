@@ -9,17 +9,4 @@ dependencies:
   - pylint
   - pytest
   - pip:
-    - torch==1.13.1
-    - -f https://data.pyg.org/whl/torch-1.13.1+cu117.html
-    - pyg-lib==0.1.0
-    - torch-cluster==1.6.0
-    - torch-scatter==2.1.0
-    - torch-sparse==0.6.16
-    - torch-geometric==2.2.0
-    - torch-spline-conv==1.2.1
-    - rdkit
-    - loguru
-    - pytorch_lightning
-    - mlflow
-    - absl-py
-    - ray_lightning
+    - -r requirements.txt

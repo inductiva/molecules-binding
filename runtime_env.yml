@@ -3,7 +3,8 @@ conda: conda_ray_cluster.yml
 env_vars:
   # ML Flow server hosted on premises. 
   # Local address is specified since the ML Flow server is in the same network as the cluster. 
-  MLFLOW_TRACKING_URI: http://192.168.1.4:8000 
+  MLFLOW_TRACKING_URI: http://100.86.132.106/
+  GOOGLE_APPLICATION_CREDENTIALS: /data/ray-cluster-352608-f8832134a1c4.json
 
 excludes:
   - .git
