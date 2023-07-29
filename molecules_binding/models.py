@@ -3,7 +3,8 @@ Define models
 """
 from torch import nn
 import torch.nn.functional as F
-from torch_geometric.nn import GATConv
+# from torch_geometric.nn import GATConv
+from .gatconvsparse import GATConvSparsemax
 from torch_geometric.nn import global_mean_pool
 
 
@@ -63,7 +64,10 @@ class GraphNN(nn.Module):
 
         for ins, outs in pairs_graph:
             graph_layers.append(
-                GATConv(ins, outs, heads=n_attention_heads, concat=False))
+                GATConvSparsemax(ins,
+                                 outs,
+                                 heads=n_attention_heads,
+                                 concat=False))
             if use_batch_norm:
                 batch_norm_layers.append(nn.BatchNorm1d(outs))
             else:
