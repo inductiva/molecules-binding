@@ -2,8 +2,7 @@
 Lightning Code
 """
 import torch
-# from molecules_binding.models import GraphNN
-from molecules_binding.models import NodeEdgeGNN
+from molecules_binding.models import GraphNN, NodeEdgeGNN
 from molecules_binding.callbacks import LossMonitor, MetricsMonitor
 from molecules_binding.lightning_wrapper import GraphNNLightning
 from torch_geometric.loader import DataLoader
@@ -63,6 +62,8 @@ flags.DEFINE_bool("remove_coords", False,
                   "remove coordinates of nodes, only for old dataset")
 flags.DEFINE_float("weight_decay", 0, "value of weight decay")
 flags.DEFINE_bool("use_batch_norm", True, "use batch norm")
+flags.DEFINE_enum("which_gnn_model", "GraphNet", ["GraphNet", "NodeEdgeGNN"],
+                  "which model to use")
 
 
 def _log_parameters(**kwargs):
@@ -135,14 +136,16 @@ def main(_):
     else:
         embedding_layer_sizes = list(map(int, FLAGS.embedding_layers))
 
-    # model = GraphNN(dataset[0].num_node_features, graph_layer_sizes,
-    #                 linear_layer_sizes, FLAGS.use_batch_norm,
-    #                 FLAGS.dropout_rate, embedding_layer_sizes,
-    #                 FLAGS.n_attention_heads)
-    model = NodeEdgeGNN(dataset[0].num_node_features,
-                        dataset[0].num_edge_features, linear_layer_sizes,
-                        FLAGS.use_batch_norm, FLAGS.dropout_rate,
-                        embedding_layer_sizes, 128, 3)
+    if FLAGS.which_gnn_model == "GraphNet":
+        model = GraphNN(dataset[0].num_node_features, graph_layer_sizes,
+                        linear_layer_sizes, FLAGS.use_batch_norm,
+                        FLAGS.dropout_rate, embedding_layer_sizes,
+                        FLAGS.n_attention_heads)
+    elif FLAGS.which_gnn_model == "NodeEdgeGNN":
+        model = NodeEdgeGNN(dataset[0].num_node_features,
+                            dataset[0].num_edge_features, linear_layer_sizes,
+                            FLAGS.use_batch_norm, FLAGS.dropout_rate,
+                            embedding_layer_sizes, 128, 3)
 
     model.double()
 
@@ -179,7 +182,8 @@ def main(_):
                         shuffle_nodes=FLAGS.shuffle_nodes,
                         remove_coords=FLAGS.remove_coords,
                         comparing_with_mlp=FLAGS.comparing_with_mlp,
-                        use_batch_norm=FLAGS.use_batch_norm)
+                        use_batch_norm=FLAGS.use_batch_norm,
+                        which_gnn_model=FLAGS.which_gnn_model)
 
         run_id = mlflow.active_run().info.run_id
         loss_callback = LossMonitor(run_id)

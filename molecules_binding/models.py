@@ -105,6 +105,7 @@ class GraphNN(nn.Module):
 
 # New approach: Pedro's model
 
+
 class MGNProcessorLayer(MessagePassing):
     """Message passing with edge and node updates"""
 
@@ -151,6 +152,7 @@ class MGNProcessorLayer(MessagePassing):
 
 class MGNProcessor(nn.Module):
     """ Processor for the MGN model"""
+
     def __init__(self, latent_size, message_passing_steps):
         super().__init__()
 
@@ -173,6 +175,7 @@ class MGNProcessor(nn.Module):
 
 class NodeEdgeGNN(nn.Module):
     """ Node and Edge GNN"""
+
     def __init__(self, num_node_features, num_edge_features, layer_sizes_linear,
                  use_batch_norm, dropout_rate, embedding_layers, latent_size,
                  num_processing_steps):
@@ -204,6 +207,11 @@ class NodeEdgeGNN(nn.Module):
         x = global_mean_pool(data.x, batch)
         x = F.dropout(x, p=dropout_rate, training=self.training)
 
-        x = self.final_mlp(x)
+        # edge attr mean pooling
+        # edge_attr = ?
+        # out = cat([x, edge_attr], dim=1)
 
-        return x
+        out = x
+        out = self.final_mlp(out)
+
+        return out
