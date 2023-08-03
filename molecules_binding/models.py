@@ -7,14 +7,14 @@ from torch_geometric.nn import GATConv
 from torch_geometric.nn import global_mean_pool
 from torch_geometric.nn.conv import MessagePassing
 from torch_geometric.data import Batch
-from torch_scatter import scatter_sum
+from torch_scatter import scatter_sum, scatter_mean
 
 
 class MLP(nn.Module):
     """ Simple Multilayer perceptron """
 
     def __init__(self, input_size, hidden_size, output_size, use_batch_norm,
-                 dropout_rate):
+                 dropout_rate, final_activation):
         super().__init__()
 
         layer_sizes = [input_size] + hidden_size
@@ -28,6 +28,8 @@ class MLP(nn.Module):
             layers.append(nn.Dropout(dropout_rate))
 
         layers.append(nn.Linear(layer_sizes[-1], output_size))
+        if final_activation:
+            layers.append(nn.ReLU())
 
         self.layers = nn.Sequential(*layers)
 
@@ -57,7 +59,7 @@ class GraphNN(nn.Module):
         else:
             self.embedding = MLP(num_node_features, embedding_layers[:-1],
                                  embedding_layers[-1], use_batch_norm,
-                                 dropout_rate)
+                                 dropout_rate, False)
             graph_layer_sizes = [embedding_layers[-1]] + layer_sizes_graph
 
         graph_layers = []
@@ -77,7 +79,7 @@ class GraphNN(nn.Module):
         self.activation = nn.ReLU()
 
         self.final_mlp = MLP(layer_sizes_graph[-1], layer_sizes_linear, 1,
-                             use_batch_norm, dropout_rate)
+                             use_batch_norm, dropout_rate, False)
 
     def forward(self, data, batch, dropout_rate, use_message_passing):
         """
@@ -115,11 +117,13 @@ class MGNProcessorLayer(MessagePassing):
         self.edge_mlp = MLP(3 * latent_size, [latent_size],
                             latent_size,
                             use_batch_norm=False,
-                            dropout_rate=0.0)
+                            dropout_rate=0.0,
+                            final_activation=True)
         self.node_mlp = MLP(2 * latent_size, [latent_size],
                             latent_size,
                             use_batch_norm=False,
-                            dropout_rate=0.0)
+                            dropout_rate=0.0,
+                            final_activation=True)
 
     def forward(self, graph: Batch) -> Batch:
 
@@ -186,15 +190,15 @@ class NodeEdgeGNN(nn.Module):
         else:
             self.embedding_nodes = MLP(num_node_features, embedding_layers[:-1],
                                        embedding_layers[-1], use_batch_norm,
-                                       dropout_rate)
+                                       dropout_rate, False)
             self.embedding_edges = MLP(num_edge_features, embedding_layers[:-1],
                                        embedding_layers[-1], use_batch_norm,
-                                       dropout_rate)
+                                       dropout_rate, False)
 
         self.processor = MGNProcessor(latent_size, num_processing_steps)
 
-        self.final_mlp = MLP(latent_size, layer_sizes_linear, 1, use_batch_norm,
-                             dropout_rate)
+        self.final_mlp = MLP(latent_size * 2, layer_sizes_linear, 1,
+                             use_batch_norm, dropout_rate, False)
 
     def forward(self, data, batch, dropout_rate, use_message_passing):
 
@@ -204,14 +208,13 @@ class NodeEdgeGNN(nn.Module):
         if use_message_passing:
             data = self.processor(data)
 
-        x = global_mean_pool(data.x, batch)
-        x = F.dropout(x, p=dropout_rate, training=self.training)
+        x = scatter_mean(data.x, batch, dim=0)
+        edge = scatter_mean(data.edge_attr, batch[data.edge_index[0]], dim=0)
+        aggregation = cat([x, edge], dim=1)
+        aggregation = F.dropout(aggregation,
+                                p=dropout_rate,
+                                training=self.training)
 
-        # edge attr mean pooling
-        # edge_attr = ?
-        # out = cat([x, edge_attr], dim=1)
-
-        out = x
-        out = self.final_mlp(out)
+        out = self.final_mlp(aggregation)
 
         return out

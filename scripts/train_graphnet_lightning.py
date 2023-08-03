@@ -64,6 +64,8 @@ flags.DEFINE_float("weight_decay", 0, "value of weight decay")
 flags.DEFINE_bool("use_batch_norm", True, "use batch norm")
 flags.DEFINE_enum("which_gnn_model", "GraphNet", ["GraphNet", "NodeEdgeGNN"],
                   "which model to use")
+flags.DEFINE_integer("num_processing_steps", 1, "number of processor layers")
+flags.DEFINE_integer("size_processing_steps", 128, "size of processor layers")
 
 
 def _log_parameters(**kwargs):
@@ -145,7 +147,8 @@ def main(_):
         model = NodeEdgeGNN(dataset[0].num_node_features,
                             dataset[0].num_edge_features, linear_layer_sizes,
                             FLAGS.use_batch_norm, FLAGS.dropout_rate,
-                            embedding_layer_sizes, 128, 3)
+                            embedding_layer_sizes, FLAGS.size_processing_steps,
+                            FLAGS.num_processing_steps)
 
     model.double()
 
@@ -183,7 +186,9 @@ def main(_):
                         remove_coords=FLAGS.remove_coords,
                         comparing_with_mlp=FLAGS.comparing_with_mlp,
                         use_batch_norm=FLAGS.use_batch_norm,
-                        which_gnn_model=FLAGS.which_gnn_model)
+                        which_gnn_model=FLAGS.which_gnn_model,
+                        num_processing_steps=FLAGS.num_processing_steps,
+                        size_processing_steps=FLAGS.size_processing_steps)
 
         run_id = mlflow.active_run().info.run_id
         loss_callback = LossMonitor(run_id)
