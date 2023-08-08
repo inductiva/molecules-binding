@@ -2,18 +2,18 @@
 Lightning Code
 """
 import torch
-from molecules_binding.models import GraphNN
-from molecules_binding.callbacks import LossMonitor, MetricsMonitor
-from molecules_binding.lightning_wrapper import GraphNNLightning
-from torch_geometric.loader import DataLoader
-from pytorch_lightning import Trainer
-from pytorch_lightning.callbacks import EarlyStopping
+from molecules_binding import models
+from molecules_binding import callbacks as our_callbacks
+from molecules_binding import lightning_wrapper
+from torch_geometric import loader
+import pytorch_lightning as pl
+from pytorch_lightning import callbacks as pl_callbacks
 from absl import flags
 from absl import app
 import mlflow
 import ray
-from ray.tune.integration.pytorch_lightning import TuneReportCallback
 from ray import tune
+from ray.tune.integration import pytorch_lightning as tune_pl
 import inductiva_ml
 
 FLAGS = flags.FLAGS
@@ -82,22 +82,23 @@ def train(config, batch_size, max_epochs, comment, train_split, splitting_seed,
         dataset, [train_size, test_size],
         generator=torch.Generator().manual_seed(splitting_seed))
 
-    train_loader = DataLoader(train_dataset,
-                              batch_size=batch_size,
-                              num_workers=num_workers,
-                              shuffle=True)
-    val_loader = DataLoader(val_dataset,
-                            batch_size=batch_size,
-                            num_workers=num_workers,
-                            shuffle=False)
+    train_loader = loader.DataLoader(train_dataset,
+                                     batch_size=batch_size,
+                                     num_workers=num_workers,
+                                     shuffle=True)
+    val_loader = loader.DataLoader(val_dataset,
+                                   batch_size=batch_size,
+                                   num_workers=num_workers,
+                                   shuffle=False)
 
-    model = GraphNN(train_dataset[0].num_node_features, message_passing_layers,
-                    fully_connected_layers, use_batch_norm, dropout_rate,
-                    embedding_layers, n_attention_head)
+    model = models.GraphNN(train_dataset[0].num_node_features,
+                           message_passing_layers, fully_connected_layers,
+                           use_batch_norm, dropout_rate, embedding_layers,
+                           n_attention_head)
     model.double()
-    lightning_model = GraphNNLightning(model, learning_rate, batch_size,
-                                       dropout_rate, weight_decay,
-                                       use_message_passing)
+    lightning_model = lightning_wrapper.GraphNNLightning(
+        model, learning_rate, batch_size, dropout_rate, weight_decay,
+        use_message_passing)
 
     # Log training parameters to mlflow.
     if mlflow_server_uri is not None:
@@ -127,17 +128,18 @@ def train(config, batch_size, max_epochs, comment, train_split, splitting_seed,
                         use_batch_norm=use_batch_norm)
 
         run_id = mlflow.active_run().info.run_id
-        loss_callback = LossMonitor(run_id)
-        metrics_callback = MetricsMonitor(run_id)
+        loss_callback = our_callbacks.LossMonitor(run_id)
+        metrics_callback = our_callbacks.MetricsMonitor(run_id)
         gpu_usage_callback = inductiva_ml.callbacks.GPUUsage(run_id)
         # Early stopping.
-        early_stopping_callback = EarlyStopping(
+        early_stopping_callback = pl_callbacks.EarlyStopping(
             monitor="val_loss",
             min_delta=0,
             patience=early_stopping_patience,
             mode="min")
 
-        report = TuneReportCallback(["loss", "val_loss"], on="validation_end")
+        report = tune_pl.TuneReportCallback(["loss", "val_loss"],
+                                            on="validation_end")
 
         callbacks = [
             loss_callback, metrics_callback, early_stopping_callback, report,
@@ -146,10 +148,10 @@ def train(config, batch_size, max_epochs, comment, train_split, splitting_seed,
 
     accelerator = "gpu" if use_gpu else None
 
-    trainer = Trainer(max_epochs=max_epochs,
-                      accelerator=accelerator,
-                      callbacks=callbacks,
-                      logger=False)
+    trainer = pl.Trainer(max_epochs=max_epochs,
+                         accelerator=accelerator,
+                         callbacks=callbacks,
+                         logger=False)
 
     trainer.fit(model=lightning_model,
                 train_dataloaders=train_loader,

@@ -1,9 +1,9 @@
 """ Callbacks for training"""
-from pytorch_lightning.callbacks import Callback
+from pytorch_lightning import callbacks
 import mlflow
 
 
-class LossMonitor(Callback):
+class LossMonitor(callbacks.Callback):
     """Logs loss and model checkpoints to mlflow."""
 
     def __init__(self, run_id):
@@ -22,7 +22,7 @@ class LossMonitor(Callback):
             mlflow.log_metrics(metrics, step=trainer.current_epoch)
 
 
-class MetricsMonitor(Callback):
+class MetricsMonitor(callbacks.Callback):
     """Logs metrics to mlflow."""
 
     def __init__(self, run_id):
