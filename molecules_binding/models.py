@@ -105,7 +105,7 @@ class GraphNN(nn.Module):
         return x
 
 
-# New approach: Pedro's model
+# New approach: Victor's model
 
 
 class MGNProcessorLayer(MessagePassing):
@@ -116,12 +116,12 @@ class MGNProcessorLayer(MessagePassing):
 
         self.edge_mlp = MLP(3 * latent_size, [latent_size],
                             latent_size,
-                            use_batch_norm=False,
+                            use_batch_norm=True,
                             dropout_rate=0.0,
                             final_activation=True)
         self.node_mlp = MLP(2 * latent_size, [latent_size],
                             latent_size,
-                            use_batch_norm=False,
+                            use_batch_norm=True,
                             dropout_rate=0.0,
                             final_activation=True)
 
