@@ -3,12 +3,11 @@ Lightning Code
 """
 import torch
 import pytorch_lightning as pl
-from torchmetrics import SpearmanCorrCoef
-from torchmetrics import PearsonCorrCoef
-from torch.nn.functional import l1_loss
+import torchmetrics
+from torch.nn import functional as F
 
-spearman = SpearmanCorrCoef(num_outputs=1)
-pearson = PearsonCorrCoef(num_outputs=1)
+spearman = torchmetrics.SpearmanCorrCoef(num_outputs=1)
+pearson = torchmetrics.PearsonCorrCoef(num_outputs=1)
 
 
 class GraphNNLightning(pl.LightningModule):
@@ -38,7 +37,7 @@ class GraphNNLightning(pl.LightningModule):
             return loss, None, None, None, None
 
         loss = self.criterion(labels, outputs)
-        mae = l1_loss(outputs, labels)
+        mae = F.l1_loss(outputs, labels)
         rmse = torch.sqrt(loss)
         pearson_correlation = pearson(outputs.cpu(), labels.cpu())
         spearman_correlation = spearman(outputs, labels)
@@ -117,7 +116,7 @@ class MLPLightning(pl.LightningModule):
             return loss, None, None, None, None
 
         loss = self.criterion(labels, outputs)
-        mae = l1_loss(outputs, labels)
+        mae = F.l1_loss(outputs, labels)
         rmse = torch.sqrt(loss)
         pearson_correlation = pearson(outputs.cpu(), labels.cpu())
         spearman_correlation = spearman(outputs, labels)

@@ -2,8 +2,8 @@
 Create class dataset from refinedset
 """
 import torch
-from molecules_binding.datasets_interaction import GraphDataset, VectorDataset
-from molecules_binding.parsers import read_dataset, get_affinities, CASF_2016_core_set
+from molecules_binding import datasets_interaction
+from molecules_binding import parsers
 from absl import flags
 from absl import app
 
@@ -45,22 +45,23 @@ def create_dataset(direct: str, affinity_dir: str, path: str, threshold: float,
                    which_file_protein: str, not_include_test_set: bool,
                    with_coords_mlp: bool):
 
-    affinity_dict = get_affinities(affinity_dir)
+    affinity_dict = parsers.get_affinities(affinity_dir)
 
-    pdb_files = read_dataset(direct, which_file_ligand, which_file_protein,
-                             affinity_dict)
+    pdb_files = parsers.read_dataset(direct, which_file_ligand,
+                                     which_file_protein, affinity_dict)
 
     if not_include_test_set:
         pdb_files = [
             pdb_file for pdb_file in pdb_files
-            if pdb_file[0] not in CASF_2016_core_set
+            if pdb_file[0] not in parsers.CASF_2016_core_set
         ]
 
     if which_model == "graphnet":
-        datasetg = GraphDataset(pdb_files, threshold)
+        datasetg = datasets_interaction.GraphDataset(pdb_files, threshold)
         torch.save(datasetg, path)
     elif which_model == "mlp":
-        datasetv = VectorDataset(pdb_files, with_coords_mlp)
+        datasetv = datasets_interaction.VectorDataset(pdb_files,
+                                                      with_coords_mlp)
         torch.save(datasetv, path)
 
 

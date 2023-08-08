@@ -1,12 +1,12 @@
 """ test parsers functions on an element of the dataset"""
-from molecules_binding.parsers import get_affinities
+from molecules_binding import parsers
 import pytest
 
 path_example_index = "example_dataset/index_data_example.2020"
 
 
 @pytest.mark.parametrize("affinity_dict, expected_dict",
-                         [(get_affinities(path_example_index), {
+                         [(parsers.get_affinities(path_example_index), {
                              "3zzf": ["Ki", 0.4, 400.0, "mM", True],
                              "1hvl": ["Ki", 9.95, 112.0, "pM", True],
                              "1zsb": ["Kd", 0.6, 250.0, "mM", True],

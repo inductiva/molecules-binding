@@ -2,16 +2,16 @@
 Lightning Code
 """
 import torch
-from molecules_binding.models import GraphNN, NodeEdgeGNN
-from molecules_binding.callbacks import LossMonitor, MetricsMonitor
-from molecules_binding.lightning_wrapper import GraphNNLightning
-from torch_geometric.loader import DataLoader
-from pytorch_lightning import Trainer
-from pytorch_lightning.callbacks import EarlyStopping
+from molecules_binding import models
+from molecules_binding import callbacks as our_callbacks
+from molecules_binding import lightning_wrapper
+from torch_geometric import loader
+import pytorch_lightning as pl
+from pytorch_lightning import callbacks as pl_callbacks
 from absl import flags
 from absl import app
 import mlflow
-from ray_lightning import RayStrategy
+import ray_lightning
 import ray
 import random
 import inductiva_ml
@@ -122,14 +122,14 @@ def main(_):
         for i in val_dataset.indices:
             dataset.rotate_graph(i, rotation_angles, FLAGS.remove_coords)
 
-    train_loader = DataLoader(train_dataset,
-                              batch_size=FLAGS.batch_size,
-                              num_workers=FLAGS.num_workers,
-                              shuffle=True)
-    val_loader = DataLoader(val_dataset,
-                            batch_size=FLAGS.batch_size,
-                            num_workers=FLAGS.num_workers,
-                            shuffle=False)
+    train_loader = loader.DataLoader(train_dataset,
+                                     batch_size=FLAGS.batch_size,
+                                     num_workers=FLAGS.num_workers,
+                                     shuffle=True)
+    val_loader = loader.DataLoader(val_dataset,
+                                   batch_size=FLAGS.batch_size,
+                                   num_workers=FLAGS.num_workers,
+                                   shuffle=False)
 
     graph_layer_sizes = list(map(int, FLAGS.num_hidden_graph))
     linear_layer_sizes = list(map(int, FLAGS.num_hidden_linear))
@@ -139,12 +139,12 @@ def main(_):
         embedding_layer_sizes = list(map(int, FLAGS.embedding_layers))
 
     if FLAGS.which_gnn_model == "GraphNet":
-        model = GraphNN(dataset[0].num_node_features, graph_layer_sizes,
+        model = models.GraphNN(dataset[0].num_node_features, graph_layer_sizes,
                         linear_layer_sizes, FLAGS.use_batch_norm,
                         FLAGS.dropout_rate, embedding_layer_sizes,
                         FLAGS.n_attention_heads)
     elif FLAGS.which_gnn_model == "NodeEdgeGNN":
-        model = NodeEdgeGNN(dataset[0].num_node_features,
+        model = models.NodeEdgeGNN(dataset[0].num_node_features,
                             dataset[0].num_edge_features, linear_layer_sizes,
                             FLAGS.use_batch_norm, FLAGS.dropout_rate,
                             embedding_layer_sizes, FLAGS.size_processing_steps,
@@ -152,10 +152,9 @@ def main(_):
 
     model.double()
 
-    lightning_model = GraphNNLightning(model, FLAGS.learning_rate,
-                                       FLAGS.batch_size, FLAGS.dropout_rate,
-                                       FLAGS.weight_decay,
-                                       FLAGS.use_message_passing)
+    lightning_model = lightning_wrapper.GraphNNLightning(
+        model, FLAGS.learning_rate, FLAGS.batch_size, FLAGS.dropout_rate,
+        FLAGS.weight_decay, FLAGS.use_message_passing)
 
     # Log training parameters to mlflow.
     if FLAGS.mlflow_server_uri is not None:
@@ -191,11 +190,11 @@ def main(_):
                         size_processing_steps=FLAGS.size_processing_steps)
 
         run_id = mlflow.active_run().info.run_id
-        loss_callback = LossMonitor(run_id)
-        metrics_callback = MetricsMonitor(run_id)
+        loss_callback = our_callbacks.LossMonitor(run_id)
+        metrics_callback = our_callbacks.MetricsMonitor(run_id)
         gpu_usage_callback = inductiva_ml.callbacks.GPUUsage(run_id)
         # Early stopping.
-        early_stopping_callback = EarlyStopping(
+        early_stopping_callback = pl_callbacks.EarlyStopping(
             monitor="val_loss",
             min_delta=0,
             patience=FLAGS.early_stopping_patience,
@@ -208,19 +207,20 @@ def main(_):
     if FLAGS.use_ray:
         ray.init()
 
-        plugin = RayStrategy(num_workers=FLAGS.num_workers,
-                             num_cpus_per_worker=FLAGS.num_cpus_per_worker,
-                             use_gpu=FLAGS.use_gpu)
-        trainer = Trainer(max_epochs=FLAGS.max_epochs,
-                          strategy=plugin,
-                          logger=False,
-                          callbacks=callbacks,
-                          log_every_n_steps=20)
+        plugin = ray_lightning.RayStrategy(
+            num_workers=FLAGS.num_workers,
+            num_cpus_per_worker=FLAGS.num_cpus_per_worker,
+            use_gpu=FLAGS.use_gpu)
+        trainer = pl.Trainer(max_epochs=FLAGS.max_epochs,
+                             strategy=plugin,
+                             logger=False,
+                             callbacks=callbacks,
+                             log_every_n_steps=20)
     else:
         accelerator = "gpu" if FLAGS.use_gpu else None
-        trainer = Trainer(max_epochs=FLAGS.max_epochs,
-                          accelerator=accelerator,
-                          callbacks=callbacks)
+        trainer = pl.Trainer(max_epochs=FLAGS.max_epochs,
+                             accelerator=accelerator,
+                             callbacks=callbacks)
 
     trainer.fit(model=lightning_model,
                 train_dataloaders=train_loader,
