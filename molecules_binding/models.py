@@ -3,10 +3,10 @@ Define models
 """
 from torch import nn, cat
 import torch.nn.functional as F
+from torch_geometric import nn as gnn
 from torch_geometric.nn.conv import MessagePassing
 from torch_geometric.data import Batch
 from torch_scatter import scatter_sum, scatter_mean
-from torch_geometric import nn as gnn
 
 
 class MLP(nn.Module):
@@ -107,7 +107,7 @@ class GraphNN(nn.Module):
 # New approach: Victor's model
 
 
-class MGNProcessorLayer(MessagePassing):
+class NodeEdgeProcessorLayer(MessagePassing):
     """Message passing with edge and node updates"""
 
     def __init__(self, latent_size):
@@ -153,7 +153,7 @@ class MGNProcessorLayer(MessagePassing):
         return aggregated_edges, updated_edges
 
 
-class MGNProcessor(nn.Module):
+class NodeEdgeProcessor(nn.Module):
     """ Processor for the MGN model"""
 
     def __init__(self, latent_size, message_passing_steps):
@@ -168,7 +168,7 @@ class MGNProcessor(nn.Module):
 
         layers = []
         for _ in range(self._message_passing_steps):
-            layers.append(MGNProcessorLayer(self._latent_size))
+            layers.append(NodeEdgeProcessorLayer(self._latent_size))
 
         return nn.Sequential(*layers)
 
@@ -194,7 +194,7 @@ class NodeEdgeGNN(nn.Module):
                                        embedding_layers[-1], use_batch_norm,
                                        dropout_rate, False)
 
-        self.processor = MGNProcessor(latent_size, num_processing_steps)
+        self.processor = NodeEdgeProcessor(latent_size, num_processing_steps)
 
         self.final_mlp = MLP(latent_size * 2, layer_sizes_linear, 1,
                              use_batch_norm, dropout_rate, False)

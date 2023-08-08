@@ -140,15 +140,16 @@ def main(_):
 
     if FLAGS.which_gnn_model == "GraphNet":
         model = models.GraphNN(dataset[0].num_node_features, graph_layer_sizes,
-                        linear_layer_sizes, FLAGS.use_batch_norm,
-                        FLAGS.dropout_rate, embedding_layer_sizes,
-                        FLAGS.n_attention_heads)
+                               linear_layer_sizes, FLAGS.use_batch_norm,
+                               FLAGS.dropout_rate, embedding_layer_sizes,
+                               FLAGS.n_attention_heads)
     elif FLAGS.which_gnn_model == "NodeEdgeGNN":
         model = models.NodeEdgeGNN(dataset[0].num_node_features,
-                            dataset[0].num_edge_features, linear_layer_sizes,
-                            FLAGS.use_batch_norm, FLAGS.dropout_rate,
-                            embedding_layer_sizes, FLAGS.size_processing_steps,
-                            FLAGS.num_processing_steps)
+                                   dataset[0].num_edge_features,
+                                   linear_layer_sizes, FLAGS.use_batch_norm,
+                                   FLAGS.dropout_rate, embedding_layer_sizes,
+                                   FLAGS.size_processing_steps,
+                                   FLAGS.num_processing_steps)
 
     model.double()
 
