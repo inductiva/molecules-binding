@@ -3,8 +3,7 @@ Define models
 """
 from torch import nn
 import torch.nn.functional as F
-from torch_geometric.nn import GATConv
-from torch_geometric.nn import global_mean_pool
+from torch_geometric import nn as gnn
 
 
 class MLP(nn.Module):
@@ -63,7 +62,7 @@ class GraphNN(nn.Module):
 
         for ins, outs in pairs_graph:
             graph_layers.append(
-                GATConv(ins, outs, heads=n_attention_heads, concat=False))
+                gnn.GATConv(ins, outs, heads=n_attention_heads, concat=False))
             if use_batch_norm:
                 batch_norm_layers.append(nn.BatchNorm1d(outs))
             else:
@@ -92,7 +91,7 @@ class GraphNN(nn.Module):
                 x = self.activation(x)
                 x = F.dropout(x, p=dropout_rate, training=self.training)
 
-        x = global_mean_pool(x, batch)
+        x = gnn.global_mean_pool(x, batch)
         x = F.dropout(x, p=dropout_rate, training=self.training)
 
         x = self.final_mlp(x)

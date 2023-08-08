@@ -2,11 +2,11 @@
 Lightning Code
 """
 import torch
-from molecules_binding.models import MLP
-from molecules_binding.callbacks import LossMonitor, MetricsMonitor
-from molecules_binding.lightning_wrapper import MLPLightning
-from pytorch_lightning import Trainer
-from pytorch_lightning.callbacks import EarlyStopping
+from molecules_binding import models
+from molecules_binding import callbacks as our_callbacks
+from molecules_binding import lightning_wrapper
+import pytorch_lightning as pl
+from pytorch_lightning import callbacks as pl_callbacks
 from absl import flags
 from absl import app
 import mlflow
@@ -76,12 +76,12 @@ def main(_):
                                              shuffle=False)
 
     layer_sizes = list(map(int, FLAGS.num_hidden))
-    model = MLP(len(dataset[0][0]), layer_sizes, 1, FLAGS.use_batch_norm,
-                FLAGS.dropout_rate)
+    model = models.MLP(len(dataset[0][0]), layer_sizes, 1, FLAGS.use_batch_norm,
+                       FLAGS.dropout_rate)
     model.double()
 
-    lightning_model = MLPLightning(model, FLAGS.learning_rate,
-                                   FLAGS.weight_decay)
+    lightning_model = lightning_wrapper.MLPLightning(model, FLAGS.learning_rate,
+                                                     FLAGS.weight_decay)
 
     # Log training parameters to mlflow.
     if FLAGS.mlflow_server_uri is not None:
@@ -107,21 +107,21 @@ def main(_):
                         sanity_check_shuffle_all_nodes=FLAGS.shuffle_all_nodes)
 
         run_id = mlflow.active_run().info.run_id
-        loss_callback = LossMonitor(run_id)
-        metrics_callback = MetricsMonitor(run_id)
+        loss_callback = our_callbacks.LossMonitor(run_id)
+        metrics_callback = our_callbacks.MetricsMonitor(run_id)
         # Early stopping.
-        early_stopping_callback = EarlyStopping(
+        early_stopping_callback = pl_callbacks.EarlyStopping(
             monitor="val_loss",
             min_delta=0,
             patience=FLAGS.early_stopping_patience,
             mode="min")
         callbacks = [loss_callback, metrics_callback, early_stopping_callback]
 
-    trainer = Trainer(max_epochs=FLAGS.max_epochs,
-                      accelerator="gpu" if FLAGS.use_gpu else None,
-                      devices=1,
-                      callbacks=callbacks,
-                      log_every_n_steps=15)
+    trainer = pl.Trainer(max_epochs=FLAGS.max_epochs,
+                         accelerator="gpu" if FLAGS.use_gpu else None,
+                         devices=1,
+                         callbacks=callbacks,
+                         log_every_n_steps=15)
     trainer.fit(model=lightning_model,
                 train_dataloaders=train_loader,
                 val_dataloaders=val_loader)
