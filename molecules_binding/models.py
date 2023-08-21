@@ -13,7 +13,7 @@ class MLP(nn.Module):
     """ Simple Multilayer perceptron """
 
     def __init__(self, input_size, hidden_size, output_size, use_batch_norm,
-                 dropout_rate, final_activation):
+                 dropout_rate, use_final_activation):
         super().__init__()
 
         layer_sizes = [input_size] + hidden_size
@@ -27,7 +27,7 @@ class MLP(nn.Module):
             layers.append(nn.Dropout(dropout_rate))
 
         layers.append(nn.Linear(layer_sizes[-1], output_size))
-        if final_activation:
+        if use_final_activation:
             layers.append(nn.ReLU())
 
         self.layers = nn.Sequential(*layers)
@@ -104,11 +104,10 @@ class GraphNN(nn.Module):
         return x
 
 
-# New approach: Victor's model
-
-
 class NodeEdgeProcessorLayer(MessagePassing):
-    """Message passing with edge and node updates"""
+    """Message passing with edge and node updates
+    (Message Passing Layer based on
+    https://github.com/inductiva/meshnets model)"""
 
     def __init__(self, latent_size):
         super().__init__()
@@ -117,12 +116,12 @@ class NodeEdgeProcessorLayer(MessagePassing):
                             latent_size,
                             use_batch_norm=True,
                             dropout_rate=0.0,
-                            final_activation=True)
+                            use_final_activation=True)
         self.node_mlp = MLP(2 * latent_size, [latent_size],
                             latent_size,
                             use_batch_norm=True,
                             dropout_rate=0.0,
-                            final_activation=True)
+                            use_final_activation=True)
 
     def forward(self, graph: Batch) -> Batch:
 
@@ -154,7 +153,7 @@ class NodeEdgeProcessorLayer(MessagePassing):
 
 
 class NodeEdgeProcessor(nn.Module):
-    """ Processor for the MGN model"""
+    """ Processor for the NodeEdge model"""
 
     def __init__(self, latent_size, message_passing_steps):
         super().__init__()

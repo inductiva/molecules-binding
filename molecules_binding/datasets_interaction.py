@@ -198,7 +198,6 @@ class GraphDataset(data.Dataset):
         self.data_list = data_list
         self.dataset_len = len(data_list)
 
-    # Carefull here
     def __len__(self):
         return len(self.data_list)
 
@@ -218,7 +217,6 @@ class GraphDataset(data.Dataset):
         graph = self.data_list[index]
         graph.pos += translation
 
-    # carefull here
     def remove_graph(self, index):
         del self.data_list[index]
 
