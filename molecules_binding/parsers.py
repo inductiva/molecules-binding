@@ -219,3 +219,25 @@ CASF_2016_core_set = {
     '2wtv', '2j7h', '2yki', '4agn', '5c28', '3ge7', '4ivd', '3f3c', '3e93',
     '1pxn', '2qbp', '4ea2', '2weg', '3n76', '3fcq'
 }
+
+files_with_error = {
+    '3p3h', '3p3j', '3p44', '3p55', '4i60', '4jfv', '4jfw', '4jhq', '4um9',
+    '2vnp', '3vjs', '2z3z', '2zjw', '3bwf', '2rib', '2jdk', '3pup', '3dcq',
+    '2c5y', '1ppw', '4avt', '3wax', '3zp9', '3egk', '2fov', '2q2n', '4c4n',
+    '1qon', '4ie3', '3cst', '5a3o', '4ixv', '3wc5', '4hmq', '1rdn', '4z7n',
+    '4rlp', '2eep', '4gql', '4m3b', '2foy', '2jdu', '1h07', '2a5b', '2wfg',
+    '2jdp', '2vr0', '2ci9', '4hxq', '3vjt', '4daw', '3lp1', '2a3w', '1epq',
+    '3v9b', '4hww', '3eyd', '2cfd', '2w08', '4hze', '3whw', '1r1h', '3e9b',
+    '4fxz', '4ayu', '3lil', '1ai6', '4z7s', '1sl3', '1esz', '3kck', '4z7f',
+    '2z97', '2fou', '2nwn', '2jsd', '2aoh', '2cfg', '2boj', '2boi', '1biw',
+    '3gpe', '3e6k', '4mma', '2jdy', '1a7x', '2g83', '4avs', '4kw6', '1z3j',
+    '4kcx', '2ork', '1mue', '2brh', '2bv4', '4ob1', '3q4c', '1ksn', '2pll',
+    '3kqr', '4fil', '4x1r', '3lik', '3qlb', '1hyz', '2jdn', '2ggx', '4ob0',
+    '4m3f', '3udn', '4ixu', '4ob2', '2wl4', '2jdm', '1bm6', '3w8o', '4kai',
+    '2ria', '2jdh', '2yak', '4kb7', '1q54', '4mm4', '2os9', '2fm5', '2ggu',
+    '4abd', '3lp2', '4u0x', '4no1', '4aoc', '1cps', '4mm6', '4dcx', '3lir',
+    '3zdv', '1k2v', '4kbi', '3rj7', '4wkv', '4lv1', '1rdl', '3h9f', '1nu1',
+    '4z7q', '4wku', '1rdi', '3m1s', '2jbl', '1bcj', '4wkt', '3zju', '3l2y',
+    '4wk2', '2fuu', '4iu0', '4l6q', '3zjt', '1f92', '3fxz', '3bho', '3fy0',
+    '1qpf', '1rdj', '4ie2', '4i06', '1g7v'
+}

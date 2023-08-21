@@ -151,8 +151,6 @@ def main(_):
                                    FLAGS.size_processing_steps,
                                    FLAGS.num_processing_steps)
 
-    model.double()
-
     lightning_model = lightning_wrapper.GraphNNLightning(
         model, FLAGS.learning_rate, FLAGS.batch_size, FLAGS.dropout_rate,
         FLAGS.weight_decay, FLAGS.use_message_passing)

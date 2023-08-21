@@ -116,9 +116,10 @@ def molecule_info(path, type_mol, num_atoms_ligand):
             *[atom.GetIsAromatic()], *onehot_number_of_hs, *onehot_chirality
         ]]
 
-    atom_features = torch.as_tensor(atom_features)
+    atom_features = torch.as_tensor(atom_features, dtype=torch.float32)
 
     coords = conformer.GetPositions()
+    coords = torch.as_tensor(coords, dtype=torch.float32)
 
     rows_l = []
     cols_l = []
@@ -150,7 +151,7 @@ def molecule_info(path, type_mol, num_atoms_ligand):
             *onehot_bond_stereo, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
         ]]
 
-    edges = torch.as_tensor([rows_l, cols_l])
+    edges = torch.as_tensor([rows_l, cols_l], dtype=torch.int64)
 
-    edges_features = torch.as_tensor(edges_features)
+    edges_features = torch.as_tensor(edges_features, dtype=torch.float32)
     return (coords, atom_features, edges, edges_features, num_atoms)

@@ -26,7 +26,7 @@ flags.mark_flag_as_required("path_dataset")
 flags.DEFINE_float("threshold", 6,
                    "maximum length of edges between protein and ligand")
 
-flags.DEFINE_enum("which_file_ligand", "sdf", ["sdf", "mol2"],
+flags.DEFINE_enum("which_file_ligand", "mol2", ["sdf", "mol2"],
                   "can choose either mol2 or sdf files")
 
 flags.DEFINE_enum("which_model", "graphnet", ["graphnet", "mlp"],
@@ -49,6 +49,11 @@ def create_dataset(direct: str, affinity_dir: str, path: str, threshold: float,
 
     pdb_files = parsers.read_dataset(direct, which_file_ligand,
                                      which_file_protein, affinity_dict)
+
+    pdb_files = [
+        pdb_file for pdb_file in pdb_files
+        if pdb_file[0] not in parsers.files_with_error
+    ]
 
     if not_include_test_set:
         pdb_files = [

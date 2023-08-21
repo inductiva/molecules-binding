@@ -110,8 +110,8 @@ def create_edges_protein_ligand(num_atoms_ligand, num_atoms_protein,
 
         edges_features[i] += edge_ind_attr
 
-    edges_both = torch.as_tensor([rows_both, cols_both])
-    edges_features = torch.as_tensor(edges_features)
+    edges_both = torch.as_tensor([rows_both, cols_both], dtype=torch.int64)
+    edges_features = torch.as_tensor(edges_features, dtype=torch.float32)
 
     return edges_both, edges_features
 
@@ -188,7 +188,11 @@ class GraphDataset(data.Dataset):
                                   edge_index=edges,
                                   pos=coords,
                                   edge_attr=edges_atrr,
-                                  y=torch.as_tensor(np.float64(affinity)))
+                                  y=[
+                                      torch.as_tensor(affinity,
+                                                      dtype=torch.float32),
+                                      str(pdb_id)
+                                  ])
                     ]
 
         print(correctly_parsed)
