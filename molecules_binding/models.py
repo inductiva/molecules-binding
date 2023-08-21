@@ -1,16 +1,19 @@
 """
 Define models
 """
-from torch import nn
+from torch import nn, cat
 import torch.nn.functional as F
 from torch_geometric import nn as gnn
+from torch_geometric.nn.conv import MessagePassing
+from torch_geometric.data import Batch
+from torch_scatter import scatter_sum, scatter_mean
 
 
 class MLP(nn.Module):
     """ Simple Multilayer perceptron """
 
     def __init__(self, input_size, hidden_size, output_size, use_batch_norm,
-                 dropout_rate):
+                 dropout_rate, use_final_activation):
         super().__init__()
 
         layer_sizes = [input_size] + hidden_size
@@ -24,6 +27,8 @@ class MLP(nn.Module):
             layers.append(nn.Dropout(dropout_rate))
 
         layers.append(nn.Linear(layer_sizes[-1], output_size))
+        if use_final_activation:
+            layers.append(nn.ReLU())
 
         self.layers = nn.Sequential(*layers)
 
@@ -53,7 +58,7 @@ class GraphNN(nn.Module):
         else:
             self.embedding = MLP(num_node_features, embedding_layers[:-1],
                                  embedding_layers[-1], use_batch_norm,
-                                 dropout_rate)
+                                 dropout_rate, False)
             graph_layer_sizes = [embedding_layers[-1]] + layer_sizes_graph
 
         graph_layers = []
@@ -73,7 +78,7 @@ class GraphNN(nn.Module):
         self.activation = nn.ReLU()
 
         self.final_mlp = MLP(layer_sizes_graph[-1], layer_sizes_linear, 1,
-                             use_batch_norm, dropout_rate)
+                             use_batch_norm, dropout_rate, False)
 
     def forward(self, data, batch, dropout_rate, use_message_passing):
         """
@@ -97,3 +102,129 @@ class GraphNN(nn.Module):
         x = self.final_mlp(x)
 
         return x
+
+
+class NodeEdgeProcessorLayer(MessagePassing):
+    """Message passing with edge and node updates
+    (Message Passing Layer based on
+    https://github.com/inductiva/meshnets model)"""
+
+    def __init__(self, latent_size):
+        super().__init__()
+
+        self.edge_mlp = MLP(3 * latent_size, [latent_size],
+                            latent_size,
+                            use_batch_norm=True,
+                            dropout_rate=0.0,
+                            use_final_activation=True)
+        self.node_mlp = MLP(2 * latent_size, [latent_size],
+                            latent_size,
+                            use_batch_norm=True,
+                            dropout_rate=0.0,
+                            use_final_activation=True)
+
+    def forward(self, graph: Batch) -> Batch:
+
+        aggregated_edges, updated_edges = self.propagate(
+            edge_index=graph.edge_index, x=graph.x, edge_attr=graph.edge_attr)
+
+        updated_nodes = cat([graph.x, aggregated_edges], dim=1)
+
+        updated_nodes = self.node_mlp(updated_nodes) + graph.x
+
+        graph.x = updated_nodes
+        graph.edge_attr = updated_edges
+
+        return graph
+
+    # returns the edges after passing through the MLP
+    def message(self, x_i, x_j, edge_attr):
+        updated_edges = cat([x_i, x_j, edge_attr], dim=1)
+        updated_edges = self.edge_mlp(updated_edges) + edge_attr
+
+        return updated_edges
+
+    # aggregates the edges
+    def aggregate(self, updated_edges, edge_index):
+
+        _, target = edge_index
+
+        aggregated_edges = scatter_sum(updated_edges, target, dim=0)
+
+        return aggregated_edges, updated_edges
+
+
+class NodeEdgeProcessor(nn.Module):
+    """ Processor for the NodeEdge model"""
+
+    def __init__(self, latent_size, message_passing_steps):
+        super().__init__()
+
+        self._latent_size = latent_size
+        self._message_passing_steps = message_passing_steps
+
+        self.processor = self._build_processor()
+
+    def _build_processor(self):
+
+        layers = []
+        for _ in range(self._message_passing_steps):
+            layers.append(NodeEdgeProcessorLayer(self._latent_size))
+
+        return nn.Sequential(*layers)
+
+    def forward(self, graph: Batch) -> Batch:
+        return self.processor(graph)
+
+
+class NodeEdgeGNN(nn.Module):
+    """ Node and Edge GNN"""
+
+    def __init__(self, num_node_features, num_edge_features, layer_sizes_linear,
+                 use_batch_norm, dropout_rate, embedding_layers, latent_size,
+                 num_processing_steps):
+        super().__init__()
+
+        if embedding_layers is None:
+            self.embedding = nn.Identity()
+        else:
+            self.embedding_nodes = MLP(num_node_features,
+                                       embedding_layers[:-1],
+                                       embedding_layers[-1],
+                                       use_batch_norm,
+                                       dropout_rate,
+                                       use_final_activation=False)
+            self.embedding_edges = MLP(num_edge_features,
+                                       embedding_layers[:-1],
+                                       embedding_layers[-1],
+                                       use_batch_norm,
+                                       dropout_rate,
+                                       use_final_activation=False)
+
+        self.processor = NodeEdgeProcessor(latent_size, num_processing_steps)
+
+        self.final_mlp = MLP(latent_size * 2,
+                             layer_sizes_linear,
+                             1,
+                             use_batch_norm,
+                             dropout_rate,
+                             use_final_activation=False)
+
+    def forward(self, data, batch, dropout_rate, use_message_passing):
+
+        data.x = self.embedding_nodes(data.x)
+        data.edge_attr = self.embedding_edges(data.edge_attr)
+
+        if use_message_passing:
+            data = self.processor(data)
+
+        x = scatter_mean(data.x, batch, dim=0)
+        edge = scatter_mean(data.edge_attr, batch[data.edge_index[0]], dim=0)
+        aggregation = cat([x, edge], dim=1)
+        aggregation = F.dropout(aggregation,
+                                p=dropout_rate,
+                                training=self.training)
+
+        out = self.final_mlp(aggregation)
+
+        return out

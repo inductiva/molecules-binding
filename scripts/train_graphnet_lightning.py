@@ -62,6 +62,10 @@ flags.DEFINE_bool("remove_coords", False,
                   "remove coordinates of nodes, only for old dataset")
 flags.DEFINE_float("weight_decay", 0, "value of weight decay")
 flags.DEFINE_bool("use_batch_norm", True, "use batch norm")
+flags.DEFINE_enum("which_gnn_model", "GATGNN", ["GATGNN", "NodeEdgeGNN"],
+                  "which model to use")
+flags.DEFINE_integer("num_processing_steps", 1, "number of processor layers")
+flags.DEFINE_integer("size_processing_steps", 128, "size of processor layers")
 
 
 def _log_parameters(**kwargs):
@@ -71,6 +75,11 @@ def _log_parameters(**kwargs):
 
 def main(_):
     dataset = torch.load(FLAGS.path_dataset)
+
+    for graph in dataset:
+        if torch.isnan(graph.edge_attr).any():
+            dataset.remove_graph(dataset.data_list.index(graph))
+
     train_size = int(FLAGS.train_split * len(dataset))
     test_size = len(dataset) - train_size
 
@@ -129,10 +138,19 @@ def main(_):
     else:
         embedding_layer_sizes = list(map(int, FLAGS.embedding_layers))
 
-    model = models.GraphNN(dataset[0].num_node_features, graph_layer_sizes,
-                           linear_layer_sizes, FLAGS.use_batch_norm,
-                           FLAGS.dropout_rate, embedding_layer_sizes,
-                           FLAGS.n_attention_heads)
+    if FLAGS.which_gnn_model == "GATGNN":
+        model = models.GraphNN(dataset[0].num_node_features, graph_layer_sizes,
+                               linear_layer_sizes, FLAGS.use_batch_norm,
+                               FLAGS.dropout_rate, embedding_layer_sizes,
+                               FLAGS.n_attention_heads)
+    elif FLAGS.which_gnn_model == "NodeEdgeGNN":
+        model = models.NodeEdgeGNN(dataset[0].num_node_features,
+                                   dataset[0].num_edge_features,
+                                   linear_layer_sizes, FLAGS.use_batch_norm,
+                                   FLAGS.dropout_rate, embedding_layer_sizes,
+                                   FLAGS.size_processing_steps,
+                                   FLAGS.num_processing_steps)
+
     model.double()
 
     lightning_model = lightning_wrapper.GraphNNLightning(
@@ -146,7 +164,7 @@ def main(_):
     mlflow.set_experiment("molecules_binding")
 
     with mlflow.start_run():
-        _log_parameters(model="GraphNet",
+        _log_parameters(model="GATGNN",
                         batch_size=FLAGS.batch_size,
                         learning_rate=FLAGS.learning_rate,
                         dropout_rate=FLAGS.dropout_rate,
@@ -167,7 +185,10 @@ def main(_):
                         shuffle_nodes=FLAGS.shuffle_nodes,
                         remove_coords=FLAGS.remove_coords,
                         comparing_with_mlp=FLAGS.comparing_with_mlp,
-                        use_batch_norm=FLAGS.use_batch_norm)
+                        use_batch_norm=FLAGS.use_batch_norm,
+                        which_gnn_model=FLAGS.which_gnn_model,
+                        num_processing_steps=FLAGS.num_processing_steps,
+                        size_processing_steps=FLAGS.size_processing_steps)
 
         run_id = mlflow.active_run().info.run_id
         loss_callback = our_callbacks.LossMonitor(run_id)

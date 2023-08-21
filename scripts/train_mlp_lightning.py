@@ -77,7 +77,7 @@ def main(_):
 
     layer_sizes = list(map(int, FLAGS.num_hidden))
     model = models.MLP(len(dataset[0][0]), layer_sizes, 1, FLAGS.use_batch_norm,
-                       FLAGS.dropout_rate)
+                       FLAGS.dropout_rate, False)
     model.double()
 
     lightning_model = lightning_wrapper.MLPLightning(model, FLAGS.learning_rate,
