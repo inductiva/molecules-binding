@@ -62,7 +62,7 @@ flags.DEFINE_bool("remove_coords", False,
                   "remove coordinates of nodes, only for old dataset")
 flags.DEFINE_float("weight_decay", 0, "value of weight decay")
 flags.DEFINE_bool("use_batch_norm", True, "use batch norm")
-flags.DEFINE_enum("which_gnn_model", "GraphNet", ["GraphNet", "NodeEdgeGNN"],
+flags.DEFINE_enum("which_gnn_model", "GATGNN", ["GATGNN", "NodeEdgeGNN"],
                   "which model to use")
 flags.DEFINE_integer("num_processing_steps", 1, "number of processor layers")
 flags.DEFINE_integer("size_processing_steps", 128, "size of processor layers")
@@ -138,7 +138,7 @@ def main(_):
     else:
         embedding_layer_sizes = list(map(int, FLAGS.embedding_layers))
 
-    if FLAGS.which_gnn_model == "GraphNet":
+    if FLAGS.which_gnn_model == "GATGNN":
         model = models.GraphNN(dataset[0].num_node_features, graph_layer_sizes,
                                linear_layer_sizes, FLAGS.use_batch_norm,
                                FLAGS.dropout_rate, embedding_layer_sizes,
@@ -164,7 +164,7 @@ def main(_):
     mlflow.set_experiment("molecules_binding")
 
     with mlflow.start_run():
-        _log_parameters(model="GraphNet",
+        _log_parameters(model="GATGNN",
                         batch_size=FLAGS.batch_size,
                         learning_rate=FLAGS.learning_rate,
                         dropout_rate=FLAGS.dropout_rate,

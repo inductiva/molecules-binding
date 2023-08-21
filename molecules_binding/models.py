@@ -137,12 +137,14 @@ class NodeEdgeProcessorLayer(MessagePassing):
 
         return graph
 
+    # returns the edges after passing through the MLP
     def message(self, x_i, x_j, edge_attr):
         updated_edges = cat([x_i, x_j, edge_attr], dim=1)
         updated_edges = self.edge_mlp(updated_edges) + edge_attr
 
         return updated_edges
 
+    # aggregates the edges
     def aggregate(self, updated_edges, edge_index):
 
         _, target = edge_index
@@ -186,17 +188,27 @@ class NodeEdgeGNN(nn.Module):
         if embedding_layers is None:
             self.embedding = nn.Identity()
         else:
-            self.embedding_nodes = MLP(num_node_features, embedding_layers[:-1],
-                                       embedding_layers[-1], use_batch_norm,
-                                       dropout_rate, False)
-            self.embedding_edges = MLP(num_edge_features, embedding_layers[:-1],
-                                       embedding_layers[-1], use_batch_norm,
-                                       dropout_rate, False)
+            self.embedding_nodes = MLP(num_node_features,
+                                       embedding_layers[:-1],
+                                       embedding_layers[-1],
+                                       use_batch_norm,
+                                       dropout_rate,
+                                       use_final_activation=False)
+            self.embedding_edges = MLP(num_edge_features,
+                                       embedding_layers[:-1],
+                                       embedding_layers[-1],
+                                       use_batch_norm,
+                                       dropout_rate,
+                                       use_final_activation=False)
 
         self.processor = NodeEdgeProcessor(latent_size, num_processing_steps)
 
-        self.final_mlp = MLP(latent_size * 2, layer_sizes_linear, 1,
-                             use_batch_norm, dropout_rate, False)
+        self.final_mlp = MLP(latent_size * 2,
+                             layer_sizes_linear,
+                             1,
+                             use_batch_norm,
+                             dropout_rate,
+                             use_final_activation=False)
 
     def forward(self, data, batch, dropout_rate, use_message_passing):
 
