@@ -28,7 +28,7 @@ class GraphNNLightning(pl.LightningModule):
         self.use_message_passing = use_message_passing
 
     def compute_statistics(self, data, training):
-        labels = data.y
+        labels = data.y[0]
         outputs = self.model(data, data.batch, self.dropout_rate,
                              self.use_message_passing).squeeze()
 
@@ -36,6 +36,7 @@ class GraphNNLightning(pl.LightningModule):
             loss = self.criterion(labels, outputs)
             return loss, None, None, None, None
 
+        labels = labels.squeeze()
         loss = self.criterion(labels, outputs)
         mae = F.l1_loss(outputs, labels)
         rmse = torch.sqrt(loss)
