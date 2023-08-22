@@ -191,6 +191,10 @@ def main(_):
         run_id = mlflow.active_run().info.run_id
         loss_callback = our_callbacks.LossMonitor(run_id)
         metrics_callback = our_callbacks.MetricsMonitor(run_id)
+        checkpoint_callback = our_callbacks.MlflowBestModelsCheckpoint(
+            run_id=run_id,
+            monitor_metrics=[("val_loss", "min")],
+            save_dir="checkpoints")
         gpu_usage_callback = inductiva_ml.callbacks.GPUUsage(run_id)
         # Early stopping.
         early_stopping_callback = pl_callbacks.EarlyStopping(
@@ -200,7 +204,7 @@ def main(_):
             mode="min")
         callbacks = [
             loss_callback, metrics_callback, early_stopping_callback,
-            gpu_usage_callback
+            checkpoint_callback, gpu_usage_callback
         ]
 
     if FLAGS.use_ray:
