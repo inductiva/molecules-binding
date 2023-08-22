@@ -5,9 +5,8 @@ import torch
 from torch import nn
 import torch.nn.functional as F
 from torch_geometric import nn as gnn
-from torch_geometric.nn import conv
 from torch_geometric import data as gdata
-from torch_scatter import scatter_sum, scatter_mean
+import torch_scatter
 
 
 class MLP(nn.Module):
@@ -105,7 +104,7 @@ class GraphNN(nn.Module):
         return x
 
 
-class NodeEdgeProcessorLayer(conv.MessagePassing):
+class NodeEdgeProcessorLayer(gnn.conv.MessagePassing):
     """Message passing with edge and node updates
     (Message Passing Layer based on
     https://github.com/inductiva/meshnets model)"""
@@ -150,7 +149,9 @@ class NodeEdgeProcessorLayer(conv.MessagePassing):
 
         _, target = edge_index
 
-        aggregated_edges = scatter_sum(updated_edges, target, dim=0)
+        aggregated_edges = torch_scatter.scatter_sum(updated_edges,
+                                                     target,
+                                                     dim=0)
 
         return aggregated_edges, updated_edges
 
@@ -219,8 +220,10 @@ class NodeEdgeGNN(nn.Module):
         if use_message_passing:
             data = self.processor(data)
 
-        x = scatter_mean(data.x, batch, dim=0)
-        edge = scatter_mean(data.edge_attr, batch[data.edge_index[0]], dim=0)
+        x = torch_scatter.scatter_mean(data.x, batch, dim=0)
+        edge = torch_scatter.scatter_mean(data.edge_attr,
+                                          batch[data.edge_index[0]],
+                                          dim=0)
         aggregation = torch.cat([x, edge], dim=1)
         aggregation = F.dropout(aggregation,
                                 p=dropout_rate,
