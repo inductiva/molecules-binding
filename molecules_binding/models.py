@@ -1,12 +1,12 @@
 """
 Define models
 """
-from torch import nn, cat
+import torch
+from torch import nn
 import torch.nn.functional as F
 from torch_geometric import nn as gnn
-from torch_geometric.nn.conv import MessagePassing
-from torch_geometric.data import Batch
-from torch_scatter import scatter_sum, scatter_mean
+from torch_geometric import data as gdata
+import torch_scatter
 
 
 class MLP(nn.Module):
@@ -104,7 +104,7 @@ class GraphNN(nn.Module):
         return x
 
 
-class NodeEdgeProcessorLayer(MessagePassing):
+class NodeEdgeProcessorLayer(gnn.conv.MessagePassing):
     """Message passing with edge and node updates
     (Message Passing Layer based on
     https://github.com/inductiva/meshnets model)"""
@@ -123,12 +123,12 @@ class NodeEdgeProcessorLayer(MessagePassing):
                             dropout_rate=0.0,
                             use_final_activation=True)
 
-    def forward(self, graph: Batch) -> Batch:
+    def forward(self, graph: gdata.Batch) -> gdata.Batch:
 
         aggregated_edges, updated_edges = self.propagate(
             edge_index=graph.edge_index, x=graph.x, edge_attr=graph.edge_attr)
 
-        updated_nodes = cat([graph.x, aggregated_edges], dim=1)
+        updated_nodes = torch.cat([graph.x, aggregated_edges], dim=1)
 
         updated_nodes = self.node_mlp(updated_nodes) + graph.x
 
@@ -139,7 +139,7 @@ class NodeEdgeProcessorLayer(MessagePassing):
 
     # returns the edges after passing through the MLP
     def message(self, x_i, x_j, edge_attr):
-        updated_edges = cat([x_i, x_j, edge_attr], dim=1)
+        updated_edges = torch.cat([x_i, x_j, edge_attr], dim=1)
         updated_edges = self.edge_mlp(updated_edges) + edge_attr
 
         return updated_edges
@@ -149,7 +149,9 @@ class NodeEdgeProcessorLayer(MessagePassing):
 
         _, target = edge_index
 
-        aggregated_edges = scatter_sum(updated_edges, target, dim=0)
+        aggregated_edges = torch_scatter.scatter_sum(updated_edges,
+                                                     target,
+                                                     dim=0)
 
         return aggregated_edges, updated_edges
 
@@ -173,7 +175,7 @@ class NodeEdgeProcessor(nn.Module):
 
         return nn.Sequential(*layers)
 
-    def forward(self, graph: Batch) -> Batch:
+    def forward(self, graph: gdata.Batch) -> gdata.Batch:
         return self.processor(graph)
 
 
@@ -218,9 +220,11 @@ class NodeEdgeGNN(nn.Module):
         if use_message_passing:
             data = self.processor(data)
 
-        x = scatter_mean(data.x, batch, dim=0)
-        edge = scatter_mean(data.edge_attr, batch[data.edge_index[0]], dim=0)
-        aggregation = cat([x, edge], dim=1)
+        x = torch_scatter.scatter_mean(data.x, batch, dim=0)
+        edge = torch_scatter.scatter_mean(data.edge_attr,
+                                          batch[data.edge_index[0]],
+                                          dim=0)
+        aggregation = torch.cat([x, edge], dim=1)
         aggregation = F.dropout(aggregation,
                                 p=dropout_rate,
                                 training=self.training)
