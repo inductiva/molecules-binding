@@ -118,11 +118,17 @@ def main(_):
             # print("mae", mae)
             # rmse = torch.sqrt(loss)
             # print("rmse", rmse)
-            statistics = lightning_model.compute_statistics(data,
-                                                            training=False)
-            print("statistics", statistics)
-
-
+            # statistics = lightning_model.compute_statistics(data,
+            # training=False)
+            # print("statistics", statistics)
+            predictions = lightning_model.model(data, data.batch,
+                                                FLAGS.dropout_rate,
+                                                FLAGS.use_message_passing)
+            labels = data.y[0].unsqueeze(-1)
+            concatenation = torch.cat((predictions, labels), dim=1)
+            print("concatenation", concatenation)
+            torch.save(concatenation,
+                       "../results/" + str(FLAGS.path_checkpoint)[32:-5])
 
 
 if __name__ == "__main__":
