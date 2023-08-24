@@ -88,8 +88,14 @@ class MlflowBestModelsCheckpoint(callbacks.Callback):
                 filename = f'best_{metric}_model_{self.run_id}.ckpt'
                 save_path = os.path.join(self.save_dir, filename)
                 trainer.save_checkpoint(save_path)
+                print('will try to log ', value, ' now. current best value ',
+                      self.best_values[metric])
                 with mlflow.start_run(run_id=self.run_id):
-                    mlflow.log_artifact(save_path, artifact_path='checkpoints')
+                    try:
+                        mlflow.log_artifact(save_path,
+                                            artifact_path='checkpoints')
+                    except Exception:
+                        print('couldnt log artifact')
         else:
             logging.info(
                 'Tried to log metric %s not present in callback_metrics.',

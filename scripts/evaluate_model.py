@@ -107,20 +107,6 @@ def main(_):
     lightning_model.eval()
     with torch.no_grad():
         for data in dataset_loader:
-            # preds = lightning_model.model(data, data.batch,
-            # FLAGS.dropout_rate, FLAGS.use_message_passing)
-            # print("preds", preds.squeeze())
-            # print("labels", data.y[0])
-            # labels = data.y[0].squeeze()
-            # loss = lightning_model.criterion(labels, preds.squeeze())
-            # print("loss", loss)
-            # mae = torch.nn.functional.l1_loss(preds.squeeze(), labels)
-            # print("mae", mae)
-            # rmse = torch.sqrt(loss)
-            # print("rmse", rmse)
-            # statistics = lightning_model.compute_statistics(data,
-            # training=False)
-            # print("statistics", statistics)
             predictions = lightning_model.model(data, data.batch,
                                                 FLAGS.dropout_rate,
                                                 FLAGS.use_message_passing)
