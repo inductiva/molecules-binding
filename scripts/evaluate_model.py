@@ -5,7 +5,6 @@ from molecules_binding import lightning_wrapper
 from torch_geometric import loader
 from absl import flags
 from absl import app
-import mlflow
 
 FLAGS = flags.FLAGS
 
@@ -98,11 +97,6 @@ def main(_):
         weight_decay=FLAGS.weight_decay,
         use_message_passing=FLAGS.use_message_passing)
     print("lightning model", lightning_model)
-
-    if FLAGS.mlflow_server_uri is not None:
-        mlflow.set_tracking_uri(FLAGS.mlflow_server_uri)
-
-    mlflow.set_experiment("molecules_binding")
 
     lightning_model.eval()
     with torch.no_grad():
