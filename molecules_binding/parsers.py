@@ -34,7 +34,7 @@ def get_affinities(affinity_directory):
 
 
 def read_dataset(directory, ligand_file_extention, protein_file_extention,
-                 aff_dict):
+                 aff_dict, include_other_protein_file):
     '''
     from directory returns a list of pdb_id, path to protein, path to ligand
     The directory contains compound folders (each has an ID with 4 letters,
@@ -58,13 +58,24 @@ def read_dataset(directory, ligand_file_extention, protein_file_extention,
                     file_protein = file
                 elif file.endswith('ligand.' + ligand_file_extention):
                     file_ligand = file
+                if include_other_protein_file:
+                    if file.endswith('protein.pdb'):
+                        file_other_protein = file
             if aff_dict[compound_id][4]:
                 # only add molecule if affinity is not uncertain
-                molecules_files += [
-                    (compound_id, os.path.join(folder_dir, file_protein),
-                     os.path.join(folder_dir,
-                                  file_ligand), aff_dict[compound_id][1])
-                ]
+                if include_other_protein_file:
+                    molecules_files += [(compound_id,
+                                         os.path.join(folder_dir, file_protein),
+                                         os.path.join(folder_dir, file_ligand),
+                                         os.path.join(folder_dir,
+                                                      file_other_protein),
+                                         aff_dict[compound_id][1])]
+                else:
+                    molecules_files += [
+                        (compound_id, os.path.join(folder_dir, file_protein),
+                         os.path.join(folder_dir,
+                                      file_ligand), aff_dict[compound_id][1])
+                    ]
     return molecules_files
 
 
