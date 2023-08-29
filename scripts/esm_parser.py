@@ -98,7 +98,7 @@ def all_files(path_aff, path):
                                            removeHs=True)
             try:
                 conformer = molecule.GetConformer(0)
-            except Exception:
+            except AttributeError:
                 pdb_ids_failed_conformer.append(pdb_id)
                 continue
             coords = conformer.GetPositions()
