@@ -162,6 +162,30 @@ def get_embeddings_from_sequences(protein_sequences, batch_converter, model,
     return embeddings
 
 
+def add_esm_encoding(graph, protein_embeddings, elements):
+    pdb_id = graph.y[1]
+    assert graph.x.size()[1] == 41
+    ligand_size = torch.sum(graph.x[:, 0] == 1)
+
+    tensor_zeros = torch.zeros((ligand_size, 320), dtype=torch.float32)
+    tensor_zero = torch.zeros((1, 320), dtype=torch.float32)
+
+    embeddings = protein_embeddings[pdb_id]
+    embeddings_indexes = elements[pdb_id]
+
+    final_tensor = tensor_zeros
+    for elem in embeddings_indexes:
+        i, j = elem
+        if i in embeddings.keys():
+            final_tensor = torch.cat(
+                (final_tensor, embeddings[i][0][j].unsqueeze(0)), dim=0)
+        else:
+            final_tensor = torch.cat((final_tensor, tensor_zero), dim=0)
+
+    graph.x = torch.cat((graph.x, final_tensor), dim=1)
+    return graph
+
+
 def main(_):
     # 1 - Extract the protein sequences and
     # the correspondences from the pdb files
@@ -212,7 +236,7 @@ def main(_):
 
     for index, graph in enumerate(dataset):
         print(index, graph.y[1])
-        dataset.add_esm_encoding(index, protein_embeddings, elements)
+        graph = add_esm_encoding(graph, protein_embeddings, elements)
 
     # save a new dataset with embeddings
     torch.save(dataset, FLAGS.path_dataset_embeddings)

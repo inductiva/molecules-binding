@@ -224,30 +224,6 @@ class GraphDataset(data.Dataset):
     def remove_graph(self, index):
         del self.data_list[index]
 
-    def add_esm_encoding(self, index, protein_embeddings, elements):
-        graph = self.data_list[index]
-        pdb_id = graph.y[1]
-        assert graph.x.size()[1] == 41
-        ligand_size = torch.sum(graph.x[:, 0] == 1)
-
-        tensor_zeros = torch.zeros((ligand_size, 320), dtype=torch.float32)
-        tensor_zero = torch.zeros((1, 320), dtype=torch.float32)
-
-        embeddings = protein_embeddings[pdb_id]
-        embeddings_indexes = elements[pdb_id]
-
-        final_tensor = tensor_zeros
-        for elem in embeddings_indexes:
-            i, j = elem
-            if i in embeddings.keys():
-                final_tensor = torch.cat(
-                    (final_tensor, embeddings[i][0][j].unsqueeze(0)), dim=0)
-            else:
-                final_tensor = torch.cat((final_tensor, tensor_zero), dim=0)
-        final_tensor.size()
-
-        graph.x = torch.cat((graph.x, final_tensor), dim=1)
-
     def remove_graph_by_ids(self, pdb_ids):
         indexes_to_del = []
         for i, graph in enumerate(self.data_list):
