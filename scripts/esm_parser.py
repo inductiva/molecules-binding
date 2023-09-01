@@ -12,10 +12,17 @@ from esm import FastaBatchedDataset
 
 FLAGS = flags.FLAGS
 flags.DEFINE_string("data_dir", None, "specify the path to the dataset")
-flags.DEFINE_string("affinity_dir", None,
-                    "specify the path to the index of the dataset")
+flags.DEFINE_string(
+    "affinity_dir", None,
+    "specify the path to the file with the affinity information of the dataset")
 flags.DEFINE_string("path_ESM_files", None,
                     "specify a path to store auxiliary files")
+flags.DEFINE_integer("current_embedding_size", 41,
+                     "specify the current size of the node features")
+flags.DEFINE_enum("which_ESM_model", "esm2_t6_8M_UR50D", [
+    "esm2_t6_8M_UR50D", "esm2_t12_35M_UR50D", "esm2_t30_150M_UR50D",
+    "esm2_t33_650M_UR50D"
+], "specify the ESM model to use")
 
 
 def find_correct_element_of_chain(residue_name, residue_id, atom_symbol,
@@ -60,7 +67,7 @@ def pdb_to_sequences(pdb_id, pdb_filepath: str):
 files_with_parsing_error = {"1qpb"}
 
 
-def all_files(path_aff, path):
+def extract_all_protein_seqs(path_aff, path):
     """For each pdb_id in the dataset, extract the protein sequence
     eg. protein_seqs["3fwv"]=
     ["SKQALKEKELGNDAYKKKDFDTALKHYDKAKELDPTNMTYIVNQAAVYFEKGDYNKCRELC
@@ -162,13 +169,16 @@ def get_embeddings_from_sequences(protein_sequences, batch_converter, model,
     return embeddings
 
 
-def add_esm_encoding(graph, protein_embeddings, elements):
+def add_esm_encoding(graph, current_embedding_size, embedding_dim,
+                     protein_embeddings, elements):
+    """Add the ESM embeddings to the pocket atoms"""
     pdb_id = graph.y[1]
-    assert graph.x.size()[1] == 41
+    assert graph.x.size()[1] == current_embedding_size
     ligand_size = torch.sum(graph.x[:, 0] == 1)
 
-    tensor_zeros = torch.zeros((ligand_size, 320), dtype=torch.float32)
-    tensor_zero = torch.zeros((1, 320), dtype=torch.float32)
+    tensor_zeros = torch.zeros((ligand_size, embedding_dim),
+                               dtype=torch.float32)
+    tensor_zero = torch.zeros((1, embedding_dim), dtype=torch.float32)
 
     embeddings = protein_embeddings[pdb_id]
     embeddings_indexes = elements[pdb_id]
@@ -189,10 +199,11 @@ def add_esm_encoding(graph, protein_embeddings, elements):
 def main(_):
     # 1 - Extract the protein sequences and
     # the correspondences from the pdb files
-    elements, pdb_ids_failed, residues_failed, protein_seqs = all_files(
+    (elements, pdb_ids_failed,
+     residues_failed, protein_seqs) = extract_all_protein_seqs(
         FLAGS.affinity_dir, FLAGS.data_dir)
-    print(pdb_ids_failed)
-    print(residues_failed)
+    print("pdb ids failed parsing ", pdb_ids_failed)
+    print("pdb residues failed parsing ", residues_failed)
     with open(FLAGS.path_esm_files + "/elements.pkl", "wb") as f:
         pickle.dump(elements, f)
 
@@ -203,12 +214,28 @@ def main(_):
         pickle.dump(pdb_ids_failed, f)
 
     # 2 - Run the ESM model to extract the embeddings from the protein sequences
-    model, alphabet = esm.pretrained.esm2_t6_8M_UR50D()
+    if FLAGS.which_ESM_model == "esm2_t6_8M_UR50D":
+        model, alphabet = esm.pretrained.esm2_t6_8M_UR50D()
+        embedding_dim = 320
+        layers = 6
+    elif FLAGS.which_ESM_model == "esm2_t12_35M_UR50D":
+        model, alphabet = esm.pretrained.esm2_t12_35M_UR50D()
+        embedding_dim = 480
+        layers = 12
+    elif FLAGS.which_ESM_model == "esm2_t30_150M_UR50D":
+        model, alphabet = esm.pretrained.esm2_t30_150M_UR50D()
+        embedding_dim = 640
+        layers = 30
+    elif FLAGS.which_ESM_model == "esm2_t33_650M_UR50D":
+        model, alphabet = esm.pretrained.esm2_t33_650M_UR50D()
+        embedding_dim = 1280
+        layers = 33
+
     batch_converter = alphabet.get_batch_converter()
     model.eval()
 
     repr_layers = [
-        (i + model.num_layers + 1) % (model.num_layers + 1) for i in [8]
+        (i + model.num_layers + 1) % (model.num_layers + 1) for i in [layers]
     ]
 
     with open(FLAGS.path_esm_files + "/protein_seqs.pkl", "rb") as f:
@@ -236,7 +263,9 @@ def main(_):
 
     for index, graph in enumerate(dataset):
         print(index, graph.y[1])
-        graph = add_esm_encoding(graph, protein_embeddings, elements)
+        graph = add_esm_encoding(graph, embedding_dim,
+                                 FLAGS.current_embedding_size,
+                                 protein_embeddings, elements)
 
     # save a new dataset with embeddings
     torch.save(dataset, FLAGS.path_dataset_embeddings)
