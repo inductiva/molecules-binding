@@ -176,14 +176,13 @@ def add_esm_encoding(graph, current_embedding_size, embedding_dim,
     assert graph.x.size()[1] == current_embedding_size
     ligand_size = torch.sum(graph.x[:, 0] == 1)
 
-    tensor_zeros = torch.zeros((ligand_size, embedding_dim),
-                               dtype=torch.float32)
     tensor_zero = torch.zeros((1, embedding_dim), dtype=torch.float32)
 
     embeddings = protein_embeddings[pdb_id]
     embeddings_indexes = elements[pdb_id]
 
-    final_tensor = tensor_zeros
+    final_tensor = torch.zeros((ligand_size, embedding_dim),
+                               dtype=torch.float32)
     for elem in embeddings_indexes:
         i, j = elem
         if i in embeddings.keys():
@@ -199,9 +198,9 @@ def add_esm_encoding(graph, current_embedding_size, embedding_dim,
 def main(_):
     # 1 - Extract the protein sequences and
     # the correspondences from the pdb files
-    (elements, pdb_ids_failed,
-     residues_failed, protein_seqs) = extract_all_protein_seqs(
-        FLAGS.affinity_dir, FLAGS.data_dir)
+    (elements, pdb_ids_failed, residues_failed,
+     protein_seqs) = extract_all_protein_seqs(FLAGS.affinity_dir,
+                                              FLAGS.data_dir)
     print("pdb ids failed parsing ", pdb_ids_failed)
     print("pdb residues failed parsing ", residues_failed)
     with open(FLAGS.path_esm_files + "/elements.pkl", "wb") as f:
