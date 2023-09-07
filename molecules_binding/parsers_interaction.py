@@ -18,11 +18,14 @@ ele2num = {
     "I": 8,
     "B": 9,
     "Si": 10,
+    "Na": 10,
+    "K": 10,
     "Fe": 11,
     "Zn": 12,
-    "Cu": 13,
+    "Mg": 13,
+    "Ca": 13,
+    "Sr": 13,
     "Mn": 14,
-    "Mo": 15
 }
 
 hybrid2num = {
@@ -88,8 +91,8 @@ def molecule_info(path, type_mol, num_atoms_ligand):
 
     for atom in molecule.GetAtoms():
         atom_symbol = atom.GetSymbol()
-        onehot_elem = np.zeros(17)
-        onehot_elem[ele2num.get(atom_symbol, 16)] = 1
+        onehot_elem = np.zeros(16)
+        onehot_elem[ele2num.get(atom_symbol, 15)] = 1
 
         onehot_atom_degree = np.zeros(6)
         if atom.GetDegree() > 5:
@@ -109,11 +112,27 @@ def molecule_info(path, type_mol, num_atoms_ligand):
         else:
             onehot_chirality[2] = 1
 
+        onehot_total_valence = np.zeros(9)
+        onehot_total_valence[atom.GetTotalValence()] = 1
+
+        onehot_explicit_valence = np.zeros(9)
+        onehot_explicit_valence[atom.GetExplicitValence()] = 1
+
+        onehot_implicit_valence = np.zeros(5)
+        onehot_implicit_valence[atom.GetImplicitValence()] = 1
+
         atom_features += [[
             *first_elem, *onehot_elem, *onehot_atom_degree,
             *[atom.GetFormalCharge(),
               atom.GetNumRadicalElectrons()], *onehot_hybridization,
-            *[atom.GetIsAromatic()], *onehot_number_of_hs, *onehot_chirality
+            *[atom.GetIsAromatic()], *onehot_number_of_hs, *onehot_chirality,
+            *onehot_total_valence, *onehot_explicit_valence,
+            *onehot_implicit_valence, *[
+                atom.IsInRing(),
+                pt.GetRvdw(atom_symbol),
+                pt.GetRcovalent(atom_symbol),
+                atom.GetFormalCharge()
+            ]
         ]]
 
     atom_features = torch.as_tensor(atom_features, dtype=torch.float32)
@@ -139,15 +158,17 @@ def molecule_info(path, type_mol, num_atoms_ligand):
         onehot_bond_stereo = np.zeros(5)
         onehot_bond_stereo[stereo2num.get(bond.GetStereo(), 4)] = 1
 
+        bond_length = np.linalg.norm(coords[i] - coords[j])
+
         rows_l += [i + num_atoms_ligand, j + num_atoms_ligand]
         cols_l += [j + num_atoms_ligand, i + num_atoms_ligand]
 
         edges_features += [[
-            *onehot_bond_type, *[bond_is_conjugated, bond_in_ring],
+            *onehot_bond_type, *[bond_is_conjugated, bond_in_ring, bond_length],
             *onehot_bond_stereo, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
         ]]
         edges_features += [[
-            *onehot_bond_type, *[bond_is_conjugated, bond_in_ring],
+            *onehot_bond_type, *[bond_is_conjugated, bond_in_ring, bond_length],
             *onehot_bond_stereo, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
         ]]
 
