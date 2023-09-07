@@ -61,8 +61,8 @@ def create_edges_protein_ligand(num_atoms_ligand, num_atoms_protein,
                 cols_both += [atom_p, atom_l]
 
                 edges_features += [[
-                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, distance * 0.1
-                ], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, distance * 0.1]]
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, distance * 0.1
+                ], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, distance * 0.1]]
 
     num_edges = len(rows_both)
 
