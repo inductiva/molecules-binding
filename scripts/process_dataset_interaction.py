@@ -50,7 +50,7 @@ def create_dataset(direct: str, affinity_dir: str, path: str, threshold: float,
     affinity_dict = parsers.get_affinities(affinity_dir)
 
     pdb_files = parsers.read_dataset(direct, which_file_ligand,
-                                     which_file_protein, affinity_dict)
+                                     which_file_protein, affinity_dict, False)
 
     pdb_files = [
         pdb_file for pdb_file in pdb_files

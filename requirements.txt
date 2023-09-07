@@ -16,3 +16,4 @@ scipy
 numba
 gputil
 google-cloud-storage
+fair-esm
