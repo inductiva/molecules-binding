@@ -106,12 +106,6 @@ def molecule_info(path, type_mol, num_atoms_ligand):
         onehot_number_of_hs = np.zeros(5)
         onehot_number_of_hs[atom.GetTotalNumHs()] = 1
 
-        onehot_chirality = np.zeros(3)
-        if atom.HasProp("_ChiralityPossible") == 1 and atom.HasProp("_CIPCode"):
-            onehot_chirality[chirality2num[atom.GetProp("_CIPCode")]] = 1
-        else:
-            onehot_chirality[2] = 1
-
         onehot_total_valence = np.zeros(9)
         onehot_total_valence[atom.GetTotalValence()] = 1
 
@@ -125,13 +119,12 @@ def molecule_info(path, type_mol, num_atoms_ligand):
             *first_elem, *onehot_elem, *onehot_atom_degree,
             *[atom.GetFormalCharge(),
               atom.GetNumRadicalElectrons()], *onehot_hybridization,
-            *[atom.GetIsAromatic()], *onehot_number_of_hs, *onehot_chirality,
+            *[atom.GetIsAromatic()], *onehot_number_of_hs,
             *onehot_total_valence, *onehot_explicit_valence,
             *onehot_implicit_valence, *[
                 atom.IsInRing(),
                 pt.GetRvdw(atom_symbol),
-                pt.GetRcovalent(atom_symbol),
-                atom.GetFormalCharge()
+                pt.GetRcovalent(atom_symbol)
             ]
         ]]
 
