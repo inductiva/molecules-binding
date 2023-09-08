@@ -50,10 +50,10 @@ def create_dataset(direct: str, affinity_dir: str, path: str, threshold: float,
     pdb_files = parsers.read_dataset(direct, which_file_ligand,
                                      which_file_protein, affinity_dict, False)
 
-    # pdb_files = [
-    #     pdb_file for pdb_file in pdb_files
-    #     if pdb_file[0] not in parsers.files_with_error
-    # ]
+    pdb_files = [
+        pdb_file for pdb_file in pdb_files
+        if pdb_file[0] not in parsers.files_with_error
+    ]
 
     if not_include_test_set:
         pdb_files = [
