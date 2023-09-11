@@ -37,8 +37,8 @@ def main(_):
     with tempfile.TemporaryDirectory() as temp_dir:
         path = mlflow.artifacts.download_artifacts(
             run_id=FLAGS.run_id,
-            artifact_path=
-            f"checkpoints/best_val_loss_model_{FLAGS.run_id}.ckpt",
+            artifact_path="checkpoints/best_val_loss_model_"
+            +f"{FLAGS.run_id}.ckpt",
             dst_path=temp_dir)
 
         dataset_loader = loader.DataLoader(dataset,
@@ -73,7 +73,9 @@ def main(_):
                 latent_size=int(parameters["size_processing_steps"]),
                 num_processing_steps=int(parameters["num_processing_steps"]))
 
-        lightning_model = lightning_wrapper.GraphNNLightning.load_from_checkpoint(
+
+        lightning_model =\
+            lightning_wrapper.GraphNNLightning.load_from_checkpoint(
             path,
             model=model,
             learning_rate=float(parameters["learning_rate"]),
