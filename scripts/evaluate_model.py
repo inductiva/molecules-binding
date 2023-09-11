@@ -37,9 +37,10 @@ def main(_):
     with tempfile.TemporaryDirectory() as temp_dir:
         path = mlflow.artifacts.download_artifacts(
             run_id=FLAGS.run_id,
-            artifact_path="checkpoints/best_val_loss_model_" +
-            f"{FLAGS.run_id}.ckpt",
+            artifact_path="checkpoints/best_val_loss_model.ckpt",
             dst_path=temp_dir)
+
+        run_name = run.data.tags["mlflow.runName"]
 
         dataset_loader = loader.DataLoader(dataset,
                                            batch_size=int(
@@ -85,7 +86,7 @@ def main(_):
             use_message_passing=bool(parameters["use_message_passing"]))
         print("lightning model", lightning_model)
 
-        lightning_model.eval()
+    lightning_model.eval()
 
     with torch.no_grad():
         for data in dataset_loader:
@@ -97,7 +98,7 @@ def main(_):
             labels = data.y[0].unsqueeze(-1)
             concatenation = torch.cat((predictions, labels), dim=1)
 
-            torch.save(concatenation, "../results/" + FLAGS.run_id)
+            torch.save(concatenation, "../results/" + run_name)
 
 
 if __name__ == "__main__":

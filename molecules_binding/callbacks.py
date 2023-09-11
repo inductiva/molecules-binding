@@ -84,10 +84,10 @@ class MlflowBestModelsCheckpoint(callbacks.Callback):
             best_value = self.best_values[metric]
             if (mode == 'min' and value < best_value) or (mode == 'max' and
                                                           value > best_value):
-                filename = f'best_{metric}_model_{self.run_id}.ckpt'
+                filename = f'best_{metric}_model.ckpt'
                 save_path = os.path.join(self.save_dir, filename)
                 trainer.save_checkpoint(save_path)
-                print('will try to log ', value, ' now. current best value ',
+                print('logging', value, '; current best value',
                       self.best_values[metric])
                 with mlflow.start_run(run_id=self.run_id):
                     try:
@@ -95,8 +95,8 @@ class MlflowBestModelsCheckpoint(callbacks.Callback):
                                             artifact_path='checkpoints')
                         self.best_values[metric] = value
                     # pylint: disable=broad-exception-caught
-                    except Exception:
-                        print('couldnt log artifact')
+                    except Exception as e:
+                        print('couldnt log artifact', e)
         else:
             logging.info(
                 'Tried to log metric %s not present in callback_metrics.',
