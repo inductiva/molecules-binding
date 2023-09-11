@@ -94,8 +94,8 @@ class MlflowBestModelsCheckpoint(callbacks.Callback):
                         mlflow.log_artifact(save_path,
                                             artifact_path='checkpoints')
                         self.best_values[metric] = value
+                    # pylint: disable=broad-exception-caught
                     except Exception:
-                        # pylint: disable=broad-exception-caught
                         print('couldnt log artifact')
         else:
             logging.info(
