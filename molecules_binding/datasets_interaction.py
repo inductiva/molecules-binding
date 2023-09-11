@@ -224,6 +224,15 @@ class GraphDataset(data.Dataset):
     def remove_graph(self, index):
         del self.data_list[index]
 
+    def remove_graph_by_ids(self, pdb_ids):
+        """eliminate complexes based on a list of their ids"""
+        indexes_to_del = []
+        for i, graph in enumerate(self.data_list):
+            if graph.y[1] in pdb_ids:
+                indexes_to_del.append(i)
+        for index in sorted(indexes_to_del, reverse=True):
+            del self.data_list[index]
+
 
 class VectorDataset(data_utils.Dataset):
     """ constructs a vector with coordinates padded and flatten

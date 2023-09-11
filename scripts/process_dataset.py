@@ -45,7 +45,7 @@ def create_dataset(direct: str, affinity_dir: str, path: str, threshold: float,
     affinity_dict = get_affinities(affinity_dir)
 
     pdb_files = read_dataset(direct, which_file_ligand, which_file_protein,
-                             affinity_dict)
+                             affinity_dict, False)
 
     if not_include_test_set:
         pdb_files_not_include = CASF_2016_core_set
