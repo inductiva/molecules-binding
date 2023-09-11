@@ -37,8 +37,8 @@ def main(_):
     with tempfile.TemporaryDirectory() as temp_dir:
         path = mlflow.artifacts.download_artifacts(
             run_id=FLAGS.run_id,
-            artifact_path="checkpoints/best_val_loss_model_"
-            +f"{FLAGS.run_id}.ckpt",
+            artifact_path="checkpoints/best_val_loss_model_" +
+            f"{FLAGS.run_id}.ckpt",
             dst_path=temp_dir)
 
         dataset_loader = loader.DataLoader(dataset,
