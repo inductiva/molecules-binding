@@ -22,6 +22,9 @@ flags.DEFINE_string("mlflow_server_uri", None,
 flags.DEFINE_integer("num_workers", 12, "number of workers for dataloader")
 flags.DEFINE_string("run_id", None, "run id of the model to evaluate")
 
+flags.DEFINE_string("results_dir", "../results/",
+                    "directory where to save results")
+
 
 def string_to_int_list(some_string):
     return [int(x.strip(" '")) for x in some_string.strip("[]").split(",")]
@@ -97,7 +100,7 @@ def main(_):
             labels = data.y[0].unsqueeze(-1)
             concatenation = torch.cat((predictions, labels), dim=1)
 
-            torch.save(concatenation, "../results/" + run_name)
+            torch.save(concatenation, FLAGS.results_dir + run_name)
 
 
 if __name__ == "__main__":
