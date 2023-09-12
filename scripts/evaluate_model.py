@@ -7,6 +7,7 @@ from absl import flags
 from absl import app
 import mlflow
 import tempfile
+import os
 
 FLAGS = flags.FLAGS
 
@@ -40,7 +41,8 @@ def main(_):
     with tempfile.TemporaryDirectory() as temp_dir:
         path = mlflow.artifacts.download_artifacts(
             run_id=FLAGS.run_id,
-            artifact_path="checkpoints/best_val_loss_model.ckpt",
+            artifact_path=os.path.join("checkpoints",
+                                       "best_val_loss_model.ckpt"),
             dst_path=temp_dir)
 
         run_name = run.data.tags["mlflow.runName"]
@@ -100,7 +102,7 @@ def main(_):
             labels = data.y[0].unsqueeze(-1)
             concatenation = torch.cat((predictions, labels), dim=1)
 
-            torch.save(concatenation, FLAGS.results_dir + run_name)
+            torch.save(concatenation, os.path.join(FLAGS.results_dir, run_name))
 
 
 if __name__ == "__main__":
