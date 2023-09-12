@@ -15,4 +15,5 @@ ray_lightning
 scipy
 numba
 gputil
+google-cloud-storage
 fair-esm

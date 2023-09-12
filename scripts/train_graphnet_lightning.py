@@ -66,6 +66,7 @@ flags.DEFINE_enum("which_gnn_model", "GATGNN", ["GATGNN", "NodeEdgeGNN"],
                   "which model to use")
 flags.DEFINE_integer("num_processing_steps", 1, "number of processor layers")
 flags.DEFINE_integer("size_processing_steps", 128, "size of processor layers")
+flags.DEFINE_bool("save_model", False, "save best model")
 
 
 def _log_parameters(**kwargs):
@@ -162,7 +163,7 @@ def main(_):
     mlflow.set_experiment("molecules_binding")
 
     with mlflow.start_run():
-        _log_parameters(model="GATGNN",
+        _log_parameters(model="GNN",
                         batch_size=FLAGS.batch_size,
                         learning_rate=FLAGS.learning_rate,
                         dropout_rate=FLAGS.dropout_rate,
@@ -186,7 +187,9 @@ def main(_):
                         use_batch_norm=FLAGS.use_batch_norm,
                         which_gnn_model=FLAGS.which_gnn_model,
                         num_processing_steps=FLAGS.num_processing_steps,
-                        size_processing_steps=FLAGS.size_processing_steps)
+                        size_processing_steps=FLAGS.size_processing_steps,
+                        max_epochs=FLAGS.max_epochs,
+                        save_model=FLAGS.save_model)
 
         run_id = mlflow.active_run().info.run_id
         loss_callback = our_callbacks.LossMonitor(run_id)
@@ -198,10 +201,18 @@ def main(_):
             min_delta=0,
             patience=FLAGS.early_stopping_patience,
             mode="min")
+
         callbacks = [
             loss_callback, metrics_callback, early_stopping_callback,
             gpu_usage_callback
         ]
+
+        if FLAGS.save_model:
+            checkpoint_callback = our_callbacks.MlflowBestModelsCheckpoint(
+                run_id=run_id,
+                monitor_metrics=[("val_loss", "min")],
+                save_dir="checkpoints")
+            callbacks.append(checkpoint_callback)
 
     if FLAGS.use_ray:
         ray.init()
