@@ -88,7 +88,7 @@ class MlflowBestModelsCheckpoint(callbacks.Callback):
                 save_path = os.path.join(self.save_dir, filename)
                 trainer.save_checkpoint(save_path)
                 logging.info('logging %s. current best value %s', value,
-                      self.best_values[metric])
+                             self.best_values[metric])
                 with mlflow.start_run(run_id=self.run_id):
                     try:
                         mlflow.log_artifact(save_path,
