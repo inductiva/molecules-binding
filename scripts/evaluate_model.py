@@ -43,8 +43,7 @@ def main(_):
         run_name = run.data.tags["mlflow.runName"]
 
         dataset_loader = loader.DataLoader(dataset,
-                                           batch_size=int(
-                                               parameters["batch_size"]),
+                                           batch_size=FLAGS.batch_size,
                                            num_workers=FLAGS.num_workers,
                                            shuffle=False)
 
@@ -80,7 +79,7 @@ def main(_):
             path,
             model=model,
             learning_rate=float(parameters["learning_rate"]),
-            batch_size=int(parameters["batch_size"]),
+            batch_size=FLAGS.batch_size,
             dropout_rate=float(parameters["dropout_rate"]),
             weight_decay=float(parameters["weight_decay"]),
             use_message_passing=bool(parameters["use_message_passing"]))
