@@ -117,7 +117,7 @@ def create_edges_protein_ligand(num_atoms_ligand, num_atoms_protein,
 class GraphDataset(data.Dataset):
     """ builds the graph for each complex"""
 
-    def __init__(self, pdb_files, threshold):
+    def __init__(self, pdb_files, threshold, separate_edges):
         """
         Args:
             pdb_files: list with triplets containing
@@ -173,25 +173,46 @@ class GraphDataset(data.Dataset):
                     coords_protein = torch.as_tensor(protein_coord)
                     coords = torch.cat((coords_ligand, coords_protein))
 
-                    edges = torch.cat((edges_ligand, edges_protein, edges_both),
-                                      dim=1)
+                    if separate_edges:
+                        edges_bond = torch.cat((edges_ligand, edges_protein),
+                                               dim=1)
+                        edges_bond_attr = torch.cat(
+                            (edges_length_ligand, edges_length_protein))
 
-                    edges_atrr = torch.cat(
-                        (edges_length_ligand, edges_length_protein,
-                         edges_dis_both))
+                        data_list += [
+                            data.Data(x=atoms,
+                                      edge_index_1=edges_bond,
+                                      edge_index_2=edges_both,
+                                      pos=coords,
+                                      edge_attr_1=edges_bond_attr,
+                                      edge_attr_2=edges_dis_both,
+                                      y=[
+                                          torch.as_tensor(affinity,
+                                                          dtype=torch.float32),
+                                          str(pdb_id)
+                                      ])
+                        ]
 
-                    # Create object graph
-                    data_list += [
-                        data.Data(x=atoms,
-                                  edge_index=edges,
-                                  pos=coords,
-                                  edge_attr=edges_atrr,
-                                  y=[
-                                      torch.as_tensor(affinity,
-                                                      dtype=torch.float32),
-                                      str(pdb_id)
-                                  ])
-                    ]
+                    else:
+                        edges = torch.cat(
+                            (edges_ligand, edges_protein, edges_both), dim=1)
+
+                        edges_atrr = torch.cat(
+                            (edges_length_ligand, edges_length_protein,
+                             edges_dis_both))
+
+                        # Create object graph
+                        data_list += [
+                            data.Data(x=atoms,
+                                      edge_index=edges,
+                                      pos=coords,
+                                      edge_attr=edges_atrr,
+                                      y=[
+                                          torch.as_tensor(affinity,
+                                                          dtype=torch.float32),
+                                          str(pdb_id)
+                                      ])
+                        ]
 
         print(correctly_parsed)
         print(not_correctly_parsed)

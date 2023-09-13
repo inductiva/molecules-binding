@@ -5,7 +5,6 @@ import torch
 from torch import nn
 import torch.nn.functional as F
 from torch_geometric import nn as gnn
-from torch_geometric import data as gdata
 import torch_scatter
 
 
@@ -37,6 +36,37 @@ class MLP(nn.Module):
         return x
 
 
+class GATProcessor(nn.Module):
+    """ Processor for the NodeEdge model"""
+
+    def __init__(self, graph_layer_sizes, use_batch_norm, n_attention_heads):
+        super().__init__()
+
+        graph_layers = []
+        pairs_graph = list(zip(graph_layer_sizes, graph_layer_sizes[1:]))
+        batch_norm_layers = []
+
+        for ins, outs in pairs_graph:
+            graph_layers.append(
+                gnn.GATConv(ins, outs, heads=n_attention_heads, concat=False))
+            if use_batch_norm:
+                batch_norm_layers.append(nn.BatchNorm1d(outs))
+            else:
+                batch_norm_layers.append(nn.Identity())
+
+        self.graph_layers = nn.ModuleList(graph_layers)
+        self.batch_norm_layers = nn.ModuleList(batch_norm_layers)
+        self.activation = nn.ReLU()
+
+    def forward(self, x, edge_index, edge_attr, dropout_rate):
+        for i, layer in enumerate(self.graph_layers):
+            x = layer(x, edge_index, edge_attr)
+            x = self.batch_norm_layers[i](x)
+            x = self.activation(x)
+            x = F.dropout(x, p=dropout_rate, training=self.training)
+        return x
+
+
 class GraphNN(nn.Module):
     """
         Graph Convolution Neural Network
@@ -61,20 +91,9 @@ class GraphNN(nn.Module):
                                  dropout_rate, False)
             graph_layer_sizes = [embedding_layers[-1]] + layer_sizes_graph
 
-        graph_layers = []
-        pairs_graph = list(zip(graph_layer_sizes, graph_layer_sizes[1:]))
-        batch_norm_layers = []
+        self.processor = GATProcessor(graph_layer_sizes, use_batch_norm,
+                                      n_attention_heads)
 
-        for ins, outs in pairs_graph:
-            graph_layers.append(
-                gnn.GATConv(ins, outs, heads=n_attention_heads, concat=False))
-            if use_batch_norm:
-                batch_norm_layers.append(nn.BatchNorm1d(outs))
-            else:
-                batch_norm_layers.append(nn.Identity())
-
-        self.graph_layers = nn.ModuleList(graph_layers)
-        self.batch_norm_layers = nn.ModuleList(batch_norm_layers)
         self.activation = nn.ReLU()
 
         self.final_mlp = MLP(layer_sizes_graph[-1], layer_sizes_linear, 1,
@@ -90,11 +109,7 @@ class GraphNN(nn.Module):
         x = self.embedding(x)
 
         if use_message_passing:
-            for i, layer in enumerate(self.graph_layers):
-                x = layer(x, edge_index, edge_attrs)
-                x = self.batch_norm_layers[i](x)
-                x = self.activation(x)
-                x = F.dropout(x, p=dropout_rate, training=self.training)
+            x = self.processor(x, edge_index, edge_attrs, dropout_rate)
 
         x = gnn.global_mean_pool(x, batch)
         x = F.dropout(x, p=dropout_rate, training=self.training)
@@ -123,19 +138,20 @@ class NodeEdgeProcessorLayer(gnn.conv.MessagePassing):
                             dropout_rate=0.0,
                             use_final_activation=True)
 
-    def forward(self, graph: gdata.Batch) -> gdata.Batch:
+    def forward(self, x, edge_index, edge_attr):
 
-        aggregated_edges, updated_edges = self.propagate(
-            edge_index=graph.edge_index, x=graph.x, edge_attr=graph.edge_attr)
+        aggregated_edges, updated_edges = self.propagate(edge_index=edge_index,
+                                                         x=x,
+                                                         edge_attr=edge_attr)
 
-        updated_nodes = torch.cat([graph.x, aggregated_edges], dim=1)
+        updated_nodes = torch.cat([x, aggregated_edges], dim=1)
 
-        updated_nodes = self.node_mlp(updated_nodes) + graph.x
+        updated_nodes = self.node_mlp(updated_nodes) + x
 
-        graph.x = updated_nodes
-        graph.edge_attr = updated_edges
+        x = updated_nodes
+        edge_attr = updated_edges
 
-        return graph
+        return x, edge_attr, edge_index
 
     # returns the edges after passing through the MLP
     def message(self, x_i, x_j, edge_attr):
@@ -145,13 +161,14 @@ class NodeEdgeProcessorLayer(gnn.conv.MessagePassing):
         return updated_edges
 
     # aggregates the edges
-    def aggregate(self, updated_edges, edge_index):
+    def aggregate(self, updated_edges, edge_index, x):
 
         _, target = edge_index
 
         aggregated_edges = torch_scatter.scatter_sum(updated_edges,
                                                      target,
-                                                     dim=0)
+                                                     dim=0,
+                                                     dim_size=x.size(0))
 
         return aggregated_edges, updated_edges
 
@@ -168,15 +185,16 @@ class NodeEdgeProcessor(nn.Module):
         self.processor = self._build_processor()
 
     def _build_processor(self):
-
         layers = []
         for _ in range(self._message_passing_steps):
             layers.append(NodeEdgeProcessorLayer(self._latent_size))
 
-        return nn.Sequential(*layers)
+        return nn.ModuleList(layers)
 
-    def forward(self, graph: gdata.Batch) -> gdata.Batch:
-        return self.processor(graph)
+    def forward(self, x, edge_index, edge_attr):
+        for layer in self.processor:
+            x, edge_attr, edge_index = layer(x, edge_index, edge_attr)
+        return x, edge_index, edge_attr
 
 
 class NodeEdgeGNN(nn.Module):
@@ -214,17 +232,81 @@ class NodeEdgeGNN(nn.Module):
 
     def forward(self, data, batch, dropout_rate, use_message_passing):
 
-        data.x = self.embedding_nodes(data.x)
-        data.edge_attr = self.embedding_edges(data.edge_attr)
+        x = self.embedding_nodes(data.x)
+        edge_attr = self.embedding_edges(data.edge_attr)
+        edge_index = data.edge_index
 
         if use_message_passing:
-            data = self.processor(data)
+            x, edge_index, edge_attr = self.processor(x, edge_index, edge_attr)
 
-        x = torch_scatter.scatter_mean(data.x, batch, dim=0)
-        edge = torch_scatter.scatter_mean(data.edge_attr,
-                                          batch[data.edge_index[0]],
-                                          dim=0)
-        aggregation = torch.cat([x, edge], dim=1)
+        x_mean = torch_scatter.scatter_mean(x, batch, dim=0)
+        edge_mean = torch_scatter.scatter_mean(edge_attr,
+                                               batch[edge_index[0]],
+                                               dim=0)
+        aggregation = torch.cat([x_mean, edge_mean], dim=1)
+        aggregation = F.dropout(aggregation,
+                                p=dropout_rate,
+                                training=self.training)
+
+        out = self.final_mlp(aggregation)
+
+        return out
+
+
+class SeparateEdgesGNN(nn.Module):
+    """ Node and Edge GNN"""
+
+    def __init__(self, num_node_features, num_edge_features, layer_sizes_linear,
+                 use_batch_norm, dropout_rate, embedding_layers, latent_size,
+                 num_processing_steps, n_attention_heads, graph_layer_sizes):
+        super().__init__()
+
+        if embedding_layers is None:
+            self.embedding = nn.Identity()
+        else:
+            self.embedding_nodes = MLP(num_node_features,
+                                       embedding_layers[:-1],
+                                       embedding_layers[-1],
+                                       use_batch_norm,
+                                       dropout_rate,
+                                       use_final_activation=False)
+            self.embedding_edges = MLP(num_edge_features,
+                                       embedding_layers[:-1],
+                                       embedding_layers[-1],
+                                       use_batch_norm,
+                                       dropout_rate,
+                                       use_final_activation=False)
+
+        self.processor1 = GATProcessor(graph_layer_sizes, use_batch_norm,
+                                       n_attention_heads)
+
+        self.processor2 = NodeEdgeProcessor(latent_size, num_processing_steps)
+
+        self.final_mlp = MLP(latent_size * 2,
+                             layer_sizes_linear,
+                             1,
+                             use_batch_norm,
+                             dropout_rate,
+                             use_final_activation=False)
+
+    def forward(self, data, batch, dropout_rate, use_message_passing):
+        x = self.embedding_nodes(data.x)
+        edge_attr_2 = self.embedding_edges(data.edge_attr_2)
+        edge_index_2 = data.edge_index_2
+        edge_attr_1 = data.edge_attr_1
+        edge_index_1 = data.edge_index_1
+
+        if use_message_passing:
+            x = self.processor1(x, edge_index_1, edge_attr_1, dropout_rate)
+
+            x, edge_index_2, edge_attr_2 = self.processor2(
+                x, edge_index_2, edge_attr_2)
+
+        x_mean = torch_scatter.scatter_mean(x, batch, dim=0)
+        edge_mean = torch_scatter.scatter_mean(edge_attr_2,
+                                               batch[edge_index_2[0]],
+                                               dim=0)
+        aggregation = torch.cat([x_mean, edge_mean], dim=1)
         aggregation = F.dropout(aggregation,
                                 p=dropout_rate,
                                 training=self.training)
