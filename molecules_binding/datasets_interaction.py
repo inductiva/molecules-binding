@@ -39,7 +39,8 @@ def structural_info(a, b, c):
 
 
 def create_edges_protein_ligand(num_atoms_ligand, num_atoms_protein,
-                                ligand_coord, protein_coord, threshold):
+                                ligand_coord, protein_coord, threshold,
+                                separate_edges):
     """
     Builds the edges between protein and ligand molecules, with length
     under a threshold
@@ -60,7 +61,10 @@ def create_edges_protein_ligand(num_atoms_ligand, num_atoms_protein,
                 rows_both += [atom_l, atom_p]
                 cols_both += [atom_p, atom_l]
 
-                edges_features += [[0] * 13 + [distance * 0.1]] * 2
+                if separate_edges:
+                    edges_features += [[distance * 0.1]] * 2
+                else:
+                    edges_features += [[0] * 13 + [distance * 0.1]] * 2
 
     num_edges = len(rows_both)
 
@@ -137,7 +141,7 @@ class GraphDataset(data.Dataset):
             print(i, pdb_id)
             (ligand_coord, atoms_ligand, edges_ligand, edges_length_ligand,
              num_atoms_ligand) = parsers_interaction.molecule_info(
-                 path_ligand, "Ligand", 0)
+                 path_ligand, "Ligand", 0, separate_edges)
 
             if ligand_coord is None:
                 not_correctly_parsed.add(pdb_id)
@@ -146,7 +150,7 @@ class GraphDataset(data.Dataset):
                 (protein_coord, atoms_protein, edges_protein,
                  edges_length_protein,
                  num_atoms_protein) = parsers_interaction.molecule_info(
-                     path_protein, "Protein", num_atoms_ligand)
+                     path_protein, "Protein", num_atoms_ligand, separate_edges)
 
                 if protein_coord is None:
                     not_correctly_parsed.add(pdb_id)
@@ -163,7 +167,7 @@ class GraphDataset(data.Dataset):
 
                     edges_both, edges_dis_both = create_edges_protein_ligand(
                         num_atoms_ligand, num_atoms_protein, ligand_coord,
-                        protein_coord, threshold)
+                        protein_coord, threshold, separate_edges)
 
                     # concatenate ligand and protein info
 
@@ -280,7 +284,7 @@ class VectorDataset(data_utils.Dataset):
 
             (ligand_coord, atoms_ligand, _, _,
              num_atoms_ligand) = parsers_interaction.molecule_info(
-                 path_ligand, "Ligand", 0)
+                 path_ligand, "Ligand", 0, False)
 
             if ligand_coord is None:
                 not_correctly_parsed.add(pdb_id)
@@ -289,7 +293,7 @@ class VectorDataset(data_utils.Dataset):
 
                 (protein_coord, atoms_protein, _, _,
                  num_atoms_protein) = parsers_interaction.molecule_info(
-                     path_protein, "Protein", num_atoms_ligand)
+                     path_protein, "Protein", num_atoms_ligand, False)
 
                 if protein_coord is None:
                     not_correctly_parsed.add(pdb_id)

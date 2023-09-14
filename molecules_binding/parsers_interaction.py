@@ -66,7 +66,7 @@ stereo2num = {
 pt = Chem.GetPeriodicTable()
 
 
-def molecule_info(path, type_mol, num_atoms_ligand):
+def molecule_info(path, type_mol, num_atoms_ligand, separate_edges):
     """from path returns the coordinates, atoms and
     bonds of molecule"""
 
@@ -177,14 +177,19 @@ def molecule_info(path, type_mol, num_atoms_ligand):
         rows_l += [i + num_atoms_ligand, j + num_atoms_ligand]
         cols_l += [j + num_atoms_ligand, i + num_atoms_ligand]
 
-        edges_features += [[
-            *onehot_bond_type, *[bond_is_conjugated, bond_in_ring, bond_length],
-            *onehot_bond_stereo, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-        ]]
-        edges_features += [[
-            *onehot_bond_type, *[bond_is_conjugated, bond_in_ring, bond_length],
-            *onehot_bond_stereo, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-        ]]
+        if separate_edges:
+            edges_features += [[
+                *onehot_bond_type,
+                *[bond_is_conjugated, bond_in_ring, bond_length],
+                *onehot_bond_stereo
+            ]] * 2
+
+        else:
+            edges_features += [[
+                *onehot_bond_type,
+                *[bond_is_conjugated, bond_in_ring, bond_length],
+                *onehot_bond_stereo
+            ] + [0] * 10] * 2
 
     edges = torch.as_tensor([rows_l, cols_l], dtype=torch.int64)
 
