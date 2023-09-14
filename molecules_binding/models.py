@@ -59,9 +59,9 @@ class GATProcessor(nn.Module):
         self.activation = nn.ReLU()
 
     def forward(self, x, edge_index, edge_attr, dropout_rate):
-        for i, layer in enumerate(self.graph_layers):
+        for norm_layer, layer in zip(self.batch_norm_layers, self.graph_layers):
             x = layer(x, edge_index, edge_attr)
-            x = self.batch_norm_layers[i](x)
+            x = norm_layer(x)
             x = self.activation(x)
             x = F.dropout(x, p=dropout_rate, training=self.training)
         return x

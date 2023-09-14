@@ -91,12 +91,12 @@ def main(_):
     train_size = int(FLAGS.train_split * len(dataset))
     test_size = len(dataset) - train_size
 
-    # if FLAGS.normalize_edges:
-    #     for data in dataset:
-    #         data.edge_attr[:, -8] = data.edge_attr[:, -8] * 0.1
-    #         data.edge_attr[:, -6:-3] = data.edge_attr[:, -6:-3] * 0.1
-    #         data.edge_attr[:, -5] = data.edge_attr[:, -5] * 0.1
-    #         data.edge_attr[:, -2] = data.edge_attr[:, -2] * 0.1
+    if FLAGS.normalize_edges:
+        for data in dataset:
+            data.edge_attr[:, -8] = data.edge_attr[:, -8] * 0.1
+            data.edge_attr[:, -6:-3] = data.edge_attr[:, -6:-3] * 0.1
+            data.edge_attr[:, -5] = data.edge_attr[:, -5] * 0.1
+            data.edge_attr[:, -2] = data.edge_attr[:, -2] * 0.1
 
     # Sanity Check : Shuffling labels
     if FLAGS.shuffle:
