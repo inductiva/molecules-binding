@@ -41,11 +41,15 @@ flags.DEFINE_bool("with_coords_mlp", False,
 
 flags.DEFINE_bool("process_core_set", False, "if True, process core set")
 
+flags.DEFINE_bool("separate_edges", False,
+                  "if True, separate covalent from interaction edges")
+
 
 def create_dataset(direct: str, affinity_dir: str, path: str, threshold: float,
                    which_model: str, which_file_ligand: str,
                    which_file_protein: str, not_include_test_set: bool,
-                   with_coords_mlp: bool, process_core_set: bool):
+                   with_coords_mlp: bool, process_core_set: bool,
+                   separate_edges: bool):
 
     affinity_dict = parsers.get_affinities(affinity_dir)
 
@@ -70,7 +74,8 @@ def create_dataset(direct: str, affinity_dir: str, path: str, threshold: float,
         ]
 
     if which_model == "graphnet":
-        datasetg = datasets_interaction.GraphDataset(pdb_files, threshold)
+        datasetg = datasets_interaction.GraphDataset(pdb_files, threshold,
+                                                     separate_edges)
         torch.save(datasetg, path)
     elif which_model == "mlp":
         datasetv = datasets_interaction.VectorDataset(pdb_files,
@@ -82,7 +87,8 @@ def main(_):
     create_dataset(FLAGS.data_dir, FLAGS.affinity_dir, FLAGS.path_dataset,
                    FLAGS.threshold, FLAGS.which_model, FLAGS.which_file_ligand,
                    FLAGS.which_file_protein, FLAGS.not_include_test_set,
-                   FLAGS.with_coords_mlp, FLAGS.process_core_set)
+                   FLAGS.with_coords_mlp, FLAGS.process_core_set,
+                   FLAGS.separate_edges)
 
 
 if __name__ == "__main__":

@@ -62,7 +62,8 @@ flags.DEFINE_bool("remove_coords", False,
                   "remove coordinates of nodes, only for old dataset")
 flags.DEFINE_float("weight_decay", 0, "value of weight decay")
 flags.DEFINE_bool("use_batch_norm", True, "use batch norm")
-flags.DEFINE_enum("which_gnn_model", "GATGNN", ["GATGNN", "NodeEdgeGNN"],
+flags.DEFINE_enum("which_gnn_model", "GATGNN",
+                  ["GATGNN", "NodeEdgeGNN", "SeparateEdgesGNN"],
                   "which model to use")
 flags.DEFINE_integer("num_processing_steps", 1, "number of processor layers")
 flags.DEFINE_integer("size_processing_steps", 128, "size of processor layers")
@@ -77,9 +78,15 @@ def _log_parameters(**kwargs):
 def main(_):
     dataset = torch.load(FLAGS.path_dataset)
 
-    for graph in dataset:
-        if torch.isnan(graph.edge_attr).any():
-            dataset.remove_graph(dataset.data_list.index(graph))
+    if FLAGS.which_gnn_model == "NodeEdgeGNN":
+        for graph in dataset:
+            if torch.isnan(graph.edge_attr).any():
+                dataset.remove_graph(dataset.data_list.index(graph))
+
+    elif FLAGS.which_gnn_model == "SeparateEdgesGNN":
+        for graph in dataset:
+            if torch.isnan(graph.edge_attr_2).any():
+                dataset.remove_graph(dataset.data_list.index(graph))
 
     train_size = int(FLAGS.train_split * len(dataset))
     test_size = len(dataset) - train_size
@@ -134,6 +141,7 @@ def main(_):
 
     graph_layer_sizes = list(map(int, FLAGS.num_hidden_graph))
     linear_layer_sizes = list(map(int, FLAGS.num_hidden_linear))
+
     if FLAGS.embedding_layers is None:
         embedding_layer_sizes = None
     else:
@@ -145,12 +153,20 @@ def main(_):
                                FLAGS.dropout_rate, embedding_layer_sizes,
                                FLAGS.n_attention_heads)
     elif FLAGS.which_gnn_model == "NodeEdgeGNN":
+        num_edge_features = dataset[0].num_edge_features
         model = models.NodeEdgeGNN(dataset[0].num_node_features,
-                                   dataset[0].num_edge_features,
-                                   linear_layer_sizes, FLAGS.use_batch_norm,
-                                   FLAGS.dropout_rate, embedding_layer_sizes,
+                                   num_edge_features, linear_layer_sizes,
+                                   FLAGS.use_batch_norm, FLAGS.dropout_rate,
+                                   embedding_layer_sizes,
                                    FLAGS.size_processing_steps,
                                    FLAGS.num_processing_steps)
+    elif FLAGS.which_gnn_model == "SeparateEdgesGNN":
+        num_edge_features = dataset[0].edge_attr_2.shape[1]
+        model = models.SeparateEdgesGNN(
+            dataset[0].num_node_features, num_edge_features, linear_layer_sizes,
+            FLAGS.use_batch_norm, FLAGS.dropout_rate, embedding_layer_sizes,
+            FLAGS.size_processing_steps, FLAGS.num_processing_steps,
+            FLAGS.n_attention_heads, graph_layer_sizes)
 
     lightning_model = lightning_wrapper.GraphNNLightning(
         model, FLAGS.learning_rate, FLAGS.batch_size, FLAGS.dropout_rate,
@@ -176,7 +192,7 @@ def main(_):
                         comment=FLAGS.comment,
                         data_split=FLAGS.train_split,
                         num_node_features=dataset[0].num_node_features,
-                        num_edge_features=dataset[0].num_edge_features,
+                        num_edge_features=num_edge_features,
                         early_stopping_patience=FLAGS.early_stopping_patience,
                         dataset_size=len(dataset),
                         splitting_seed=FLAGS.splitting_seed,
