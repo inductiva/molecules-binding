@@ -153,19 +153,20 @@ def main(_):
                                FLAGS.dropout_rate, embedding_layer_sizes,
                                FLAGS.n_attention_heads)
     elif FLAGS.which_gnn_model == "NodeEdgeGNN":
+        num_edge_features = dataset[0].num_edge_features
         model = models.NodeEdgeGNN(dataset[0].num_node_features,
-                                   dataset[0].num_edge_features,
-                                   linear_layer_sizes, FLAGS.use_batch_norm,
-                                   FLAGS.dropout_rate, embedding_layer_sizes,
+                                   num_edge_features, linear_layer_sizes,
+                                   FLAGS.use_batch_norm, FLAGS.dropout_rate,
+                                   embedding_layer_sizes,
                                    FLAGS.size_processing_steps,
                                    FLAGS.num_processing_steps)
     elif FLAGS.which_gnn_model == "SeparateEdgesGNN":
+        num_edge_features = dataset[0].edge_attr_2.shape[1]
         model = models.SeparateEdgesGNN(
-            dataset[0].num_node_features, dataset[0].edge_attr_2.shape[1],
-            linear_layer_sizes, FLAGS.use_batch_norm, FLAGS.dropout_rate,
-            embedding_layer_sizes, FLAGS.size_processing_steps,
-            FLAGS.num_processing_steps, FLAGS.n_attention_heads,
-            graph_layer_sizes)
+            dataset[0].num_node_features, num_edge_features, linear_layer_sizes,
+            FLAGS.use_batch_norm, FLAGS.dropout_rate, embedding_layer_sizes,
+            FLAGS.size_processing_steps, FLAGS.num_processing_steps,
+            FLAGS.n_attention_heads, graph_layer_sizes)
 
     lightning_model = lightning_wrapper.GraphNNLightning(
         model, FLAGS.learning_rate, FLAGS.batch_size, FLAGS.dropout_rate,
@@ -191,7 +192,7 @@ def main(_):
                         comment=FLAGS.comment,
                         data_split=FLAGS.train_split,
                         num_node_features=dataset[0].num_node_features,
-                        num_edge_features=dataset[0].num_edge_features,
+                        num_edge_features=num_edge_features,
                         early_stopping_patience=FLAGS.early_stopping_patience,
                         dataset_size=len(dataset),
                         splitting_seed=FLAGS.splitting_seed,

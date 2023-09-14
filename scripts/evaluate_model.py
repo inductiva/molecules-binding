@@ -78,6 +78,22 @@ def main(_):
                 latent_size=int(parameters["size_processing_steps"]),
                 num_processing_steps=int(parameters["num_processing_steps"]))
 
+        elif parameters["which_gnn_model"] == "SeparateEdgesGNN":
+            model = models.SeparateEdgesGNN(
+                num_node_features=int(parameters["num_node_features"]),
+                num_edge_features=int(parameters["num_edge_features"]),
+                layer_sizes_linear=string_to_int_list(
+                    parameters["num_hidden_linear"]),
+                use_batch_norm=bool(parameters["use_batch_norm"]),
+                dropout_rate=float(parameters["dropout_rate"]),
+                embedding_layers=string_to_int_list(
+                    parameters["embedding_layers"]),
+                latent_size=int(parameters["size_processing_steps"]),
+                num_processing_steps=int(parameters["num_processing_steps"]),
+                n_attention_heads=int(parameters["n_attention_heads"]),
+                graph_layer_sizes=string_to_int_list(
+                    parameters["num_hidden_graph"]))
+
 
         lightning_model =\
             lightning_wrapper.GraphNNLightning.load_from_checkpoint(
