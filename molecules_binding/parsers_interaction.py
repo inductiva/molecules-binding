@@ -178,18 +178,32 @@ def molecule_info(path, type_mol, num_atoms_ligand, separate_edges):
         cols_l += [j + num_atoms_ligand, i + num_atoms_ligand]
 
         if separate_edges:
-            edges_features += [[
-                *onehot_bond_type,
-                *[bond_is_conjugated, bond_in_ring, bond_length],
-                *onehot_bond_stereo
-            ]] * 2
+            edges_features += [
+                [
+                    *onehot_bond_type,
+                    *[bond_is_conjugated, bond_in_ring, bond_length],
+                    *onehot_bond_stereo
+                ],
+                [
+                    *onehot_bond_type,
+                    *[bond_is_conjugated, bond_in_ring, bond_length],
+                    *onehot_bond_stereo
+                ]
+            ]
 
         else:
-            edges_features += [[
-                *onehot_bond_type,
-                *[bond_is_conjugated, bond_in_ring, bond_length],
-                *onehot_bond_stereo
-            ] + [0] * 10] * 2
+            edges_features += [
+                [
+                    *onehot_bond_type,
+                    *[bond_is_conjugated, bond_in_ring, bond_length],
+                    *onehot_bond_stereo
+                ] + [0] * 10,
+                [
+                    *onehot_bond_type,
+                    *[bond_is_conjugated, bond_in_ring, bond_length],
+                    *onehot_bond_stereo
+                ] + [0] * 10
+            ]
 
     edges = torch.as_tensor([rows_l, cols_l], dtype=torch.int64)
 
