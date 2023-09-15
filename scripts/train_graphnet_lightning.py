@@ -68,6 +68,10 @@ flags.DEFINE_enum("which_gnn_model", "GATGNN",
 flags.DEFINE_integer("num_processing_steps", 1, "number of processor layers")
 flags.DEFINE_integer("size_processing_steps", 128, "size of processor layers")
 flags.DEFINE_bool("save_model", False, "save best model")
+flags.DEFINE_enum("final_aggregation", "mean", ["mean", "sum"],
+                  "final aggregation of embeddings")
+flags.DEFINE_enum("what_to_aggregate", "nodes", ["nodes", "edges", "both"],
+                  "choose what to aggregate in the final layers")
 
 
 def _log_parameters(**kwargs):
@@ -154,12 +158,11 @@ def main(_):
                                FLAGS.n_attention_heads)
     elif FLAGS.which_gnn_model == "NodeEdgeGNN":
         num_edge_features = dataset[0].num_edge_features
-        model = models.NodeEdgeGNN(dataset[0].num_node_features,
-                                   num_edge_features, linear_layer_sizes,
-                                   FLAGS.use_batch_norm, FLAGS.dropout_rate,
-                                   embedding_layer_sizes,
-                                   FLAGS.size_processing_steps,
-                                   FLAGS.num_processing_steps)
+        model = models.NodeEdgeGNN(
+            dataset[0].num_node_features, num_edge_features, linear_layer_sizes,
+            FLAGS.use_batch_norm, FLAGS.dropout_rate, embedding_layer_sizes,
+            FLAGS.size_processing_steps, FLAGS.num_processing_steps,
+            FLAGS.final_aggregation, FLAGS.what_to_aggregate)
     elif FLAGS.which_gnn_model == "SeparateEdgesGNN":
         num_edge_features = dataset[0].edge_attr_2.shape[1]
         model = models.SeparateEdgesGNN(
@@ -205,6 +208,8 @@ def main(_):
                         num_processing_steps=FLAGS.num_processing_steps,
                         size_processing_steps=FLAGS.size_processing_steps,
                         max_epochs=FLAGS.max_epochs,
+                        final_aggregation=FLAGS.final_aggregation,
+                        what_to_aggregate=FLAGS.what_to_aggregate,
                         save_model=FLAGS.save_model)
 
         run_id = mlflow.active_run().info.run_id

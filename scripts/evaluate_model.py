@@ -76,7 +76,9 @@ def main(_):
                 embedding_layers=string_to_int_list(
                     parameters["embedding_layers"]),
                 latent_size=int(parameters["size_processing_steps"]),
-                num_processing_steps=int(parameters["num_processing_steps"]))
+                num_processing_steps=int(parameters["num_processing_steps"]),
+                final_aggregation=parameters["final_aggregation"],
+                what_to_aggregate=parameters["what_to_aggregate"])
 
         elif parameters["which_gnn_model"] == "SeparateEdgesGNN":
             model = models.SeparateEdgesGNN(
