@@ -122,7 +122,7 @@ def create_edges_protein_ligand(num_atoms_ligand, num_atoms_protein,
 class GraphDataset(data.Dataset):
     """ builds the graph for each complex"""
 
-    def __init__(self, pdb_files, threshold, separate_edges):
+    def __init__(self, pdb_files, threshold, separate_edges, remove_waters):
         """
         Args:
             pdb_files: list with triplets containing
@@ -142,7 +142,7 @@ class GraphDataset(data.Dataset):
             print(i, pdb_id)
             (ligand_coord, atoms_ligand, edges_ligand, edges_length_ligand,
              num_atoms_ligand) = parsers_interaction.molecule_info(
-                 path_ligand, "Ligand", 0, separate_edges)
+                 path_ligand, "Ligand", 0, separate_edges, False)
 
             if ligand_coord is None:
                 not_correctly_parsed.add(pdb_id)
@@ -151,7 +151,7 @@ class GraphDataset(data.Dataset):
                 (protein_coord, atoms_protein, edges_protein,
                  edges_length_protein,
                  num_atoms_protein) = parsers_interaction.molecule_info(
-                     path_protein, "Protein", num_atoms_ligand, separate_edges)
+                     path_protein, "Protein", num_atoms_ligand, separate_edges, remove_waters)
 
                 if protein_coord is None:
                     not_correctly_parsed.add(pdb_id)

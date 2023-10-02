@@ -66,7 +66,7 @@ stereo2num = {
 pt = Chem.GetPeriodicTable()
 
 
-def molecule_info(path, type_mol, num_atoms_ligand, separate_edges):
+def molecule_info(path, type_mol, num_atoms_ligand, separate_edges, remove_waters):
     """from path returns the coordinates, atoms and
     bonds of molecule"""
 
@@ -95,7 +95,13 @@ def molecule_info(path, type_mol, num_atoms_ligand, separate_edges):
     else:
         first_elem = [0]
 
-    for atom in molecule.GetAtoms():
+    for i, atom in enumerate(molecule.GetAtoms()):
+        if remove_waters and type_mol == "Protein":
+            atom_residue = atom.GetPDBResidueInfo().GetResidueName()
+            if atom_residue == "HOH":
+                continue
+    
+        assert atom.GetIdx() == i
         atom_symbol = atom.GetSymbol()
         onehot_elem = np.zeros(16)
         onehot_elem[ele2num.get(atom_symbol, 15)] = 1
@@ -152,7 +158,8 @@ def molecule_info(path, type_mol, num_atoms_ligand, separate_edges):
     atom_features = torch.as_tensor(atom_features, dtype=torch.float32)
 
     coords = conformer.GetPositions()
-    coords = torch.as_tensor(coords, dtype=torch.float32)
+    coords = torch.as_tensor(coords[:atom_features.size(0)], dtype=torch.float32)
+    num_atoms = atom_features.size(0)
 
     rows_l = []
     cols_l = []
