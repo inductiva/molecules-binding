@@ -5,6 +5,7 @@ import torch
 from molecules_binding import models
 from molecules_binding import callbacks as our_callbacks
 from molecules_binding import lightning_wrapper
+from molecules_binding import parsers
 from torch_geometric import loader
 import pytorch_lightning as pl
 from pytorch_lightning import callbacks as pl_callbacks
@@ -70,7 +71,7 @@ flags.DEFINE_integer("size_processing_steps", 128, "size of processor layers")
 flags.DEFINE_bool("save_model", False, "save best model")
 flags.DEFINE_enum("final_aggregation", "mean", ["mean", "sum"],
                   "final aggregation of embeddings")
-flags.DEFINE_enum("what_to_aggregate", "nodes", ["nodes", "edges", "both"],
+flags.DEFINE_enum("what_to_aggregate", "both", ["nodes", "edges", "both"],
                   "choose what to aggregate in the final layers")
 
 
@@ -81,6 +82,13 @@ def _log_parameters(**kwargs):
 
 def main(_):
     dataset = torch.load(FLAGS.path_dataset)
+
+    # remove core set
+    # core_set = list(parsers.CASF_2016_core_set)
+    # print(dataset)
+    # dataset.remove_graph_by_ids(core_set)
+    # print(dataset)
+
 
     if FLAGS.which_gnn_model == "NodeEdgeGNN":
         for graph in dataset:
@@ -105,12 +113,12 @@ def main(_):
     # Sanity Check : Shuffling labels
     if FLAGS.shuffle:
         random.seed(FLAGS.shuffling_seed)
-        labels = [data.y for data in dataset]
+        labels = [data.y[0] for data in dataset]
         labels_shuffled = labels.copy()
         random.shuffle(labels_shuffled)
 
         for i in range(len(dataset)):
-            dataset[i].y = labels_shuffled[i]
+            dataset[i].y[0] = labels_shuffled[i]
 
     train_dataset, val_dataset = torch.utils.data.random_split(
         dataset, [train_size, test_size],
