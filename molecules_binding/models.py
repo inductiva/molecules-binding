@@ -226,7 +226,7 @@ class NodeEdgeGNN(nn.Module):
         if what_to_aggregate == 'nodes' or what_to_aggregate == 'edges':
             beggining_layer = latent_size
         elif what_to_aggregate == 'both':
-            beggining_layer = latent_size * 2
+           beggining_layer = latent_size * 2
 
         self.final_mlp = MLP(beggining_layer,
                              layer_sizes_linear,
@@ -258,8 +258,8 @@ class NodeEdgeGNN(nn.Module):
         elif self.what_to_aggregate == 'both':
             x_mean = torch_scatter.scatter_mean(x, batch, dim=0)
             edge_mean = torch_scatter.scatter_mean(edge_attr,
-                                                   batch[edge_index[0]],
-                                                   dim=0)
+                                                    batch[edge_index[0]],
+                                                    dim=0)
             aggregation = torch.cat([x_mean, edge_mean], dim=1)
         # if self.final_aggregation == 'mean':
         #     x_mean = torch_scatter.scatter_mean(x, batch, dim=0)
