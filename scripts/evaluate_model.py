@@ -28,7 +28,10 @@ flags.DEFINE_string("results_dir", "../results/",
 
 
 def string_to_int_list(some_string):
-    return [int(x.strip(" '")) for x in some_string.strip("[]").split(",")]
+    if some_string == "" or some_string == "[]":
+        return []
+    else:
+        return [int(x.strip(" '")) for x in some_string.strip("[]").split(",")]
 
 
 def main(_):

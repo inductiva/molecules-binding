@@ -5,6 +5,7 @@ import torch
 from molecules_binding import models
 from molecules_binding import callbacks as our_callbacks
 from molecules_binding import lightning_wrapper
+from molecules_binding import parsers
 from torch_geometric import loader
 import pytorch_lightning as pl
 from pytorch_lightning import callbacks as pl_callbacks
@@ -77,6 +78,9 @@ def _log_parameters(**kwargs):
 
 def main(_):
     dataset = torch.load(FLAGS.path_dataset)
+
+    # remove elements from the core set
+    dataset.remove_graph_by_ids(parsers.CASF_2016_core_set)
 
     if FLAGS.which_gnn_model == "NodeEdgeGNN":
         for graph in dataset:
