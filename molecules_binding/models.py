@@ -223,10 +223,10 @@ class NodeEdgeGNN(nn.Module):
 
         self.processor = NodeEdgeProcessor(latent_size, num_processing_steps)
 
-        if what_to_aggregate == 'nodes' or what_to_aggregate == 'edges':
+        if what_to_aggregate in ('nodes', 'edges'):
             beggining_layer = latent_size
         elif what_to_aggregate == 'both':
-           beggining_layer = latent_size * 2
+            beggining_layer = latent_size * 2
 
         self.final_mlp = MLP(beggining_layer,
                              layer_sizes_linear,
@@ -258,19 +258,10 @@ class NodeEdgeGNN(nn.Module):
         elif self.what_to_aggregate == 'both':
             x_mean = torch_scatter.scatter_mean(x, batch, dim=0)
             edge_mean = torch_scatter.scatter_mean(edge_attr,
-                                                    batch[edge_index[0]],
-                                                    dim=0)
+                                                   batch[edge_index[0]],
+                                                   dim=0)
             aggregation = torch.cat([x_mean, edge_mean], dim=1)
-        # if self.final_aggregation == 'mean':
-        #     x_mean = torch_scatter.scatter_mean(x, batch, dim=0)
-        #     edge_mean = torch_scatter.scatter_mean(edge_attr,
-        #                                         batch[edge_index[0]],
-        #                                         dim=0)
-        # elif self.final_aggregation == 'sum':
-        #     x_mean = torch_scatter.scatter_sum(x, batch, dim=0)
-        #     edge_mean = torch_scatter.scatter_sum(edge_attr,
-        #                                         batch[edge_index[0]],
-        #                                         dim=0)
+
         aggregation = F.dropout(aggregation,
                                 p=dropout_rate,
                                 training=self.training)

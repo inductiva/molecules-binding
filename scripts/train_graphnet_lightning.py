@@ -5,7 +5,6 @@ import torch
 from molecules_binding import models
 from molecules_binding import callbacks as our_callbacks
 from molecules_binding import lightning_wrapper
-from molecules_binding import parsers
 from torch_geometric import loader
 import pytorch_lightning as pl
 from pytorch_lightning import callbacks as pl_callbacks
@@ -59,8 +58,7 @@ flags.DEFINE_list("rotation_angles", [30, 30, 30],
 flags.DEFINE_boolean("comparing_with_mlp", False,
                      "Sanity Check: Compare with MLP")
 flags.DEFINE_bool("shuffle_nodes", False, "Sanity Check: Shuffle nodes")
-flags.DEFINE_bool("include_coords", False,
-                  "include coordinates of nodes")
+flags.DEFINE_bool("include_coords", False, "include coordinates of nodes")
 flags.DEFINE_float("weight_decay", 0, "value of weight decay")
 flags.DEFINE_bool("use_batch_norm", True, "use batch norm")
 flags.DEFINE_enum("which_gnn_model", "GATGNN",
@@ -73,7 +71,8 @@ flags.DEFINE_enum("final_aggregation", "mean", ["mean", "sum"],
                   "final aggregation of embeddings")
 flags.DEFINE_enum("what_to_aggregate", "both", ["nodes", "edges", "both"],
                   "choose what to aggregate in the final layers")
-flags.DEFINE_bool("center_coords_in_ligand", False, "center coordinates on the ligand")
+flags.DEFINE_bool("center_coords_in_ligand", False,
+                  "center coordinates on the ligand")
 
 # flags.DEFINE_string("path_dataset_2", None,"another dataset")
 
@@ -98,7 +97,6 @@ def main(_):
 
     train_size = int(FLAGS.train_split * len(dataset))
     test_size = len(dataset) - train_size
-
 
     if FLAGS.normalize_edges:
         for graph in dataset:
@@ -125,7 +123,7 @@ def main(_):
     if FLAGS.comparing_with_mlp:
         for i in range(len(dataset)):
             dataset[i].edge_attr = None
-    
+
     if FLAGS.center_coords_in_ligand:
         for graph in dataset:
             center = graph.pos[graph.x[:, 0] == 1].mean(dim=0)
@@ -133,7 +131,7 @@ def main(_):
 
     if FLAGS.include_coords:
         for i, graph in enumerate(dataset):
-            graph.x = torch.cat((graph.x, graph.pos*0.1), dim=1)
+            graph.x = torch.cat((graph.x, graph.pos * 0.1), dim=1)
 
     # only for previous representation of graphs
     if FLAGS.sanity_check_rotation:
