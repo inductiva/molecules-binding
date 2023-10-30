@@ -14,7 +14,6 @@ import mlflow
 import ray_lightning
 import ray
 import random
-import inductiva_ml
 
 FLAGS = flags.FLAGS
 
@@ -73,8 +72,6 @@ flags.DEFINE_enum("what_to_aggregate", "both", ["nodes", "edges", "both"],
                   "choose what to aggregate in the final layers")
 flags.DEFINE_bool("center_coords_in_ligand", False,
                   "center coordinates on the ligand")
-
-# flags.DEFINE_string("path_dataset_2", None,"another dataset")
 
 
 def _log_parameters(**kwargs):
@@ -221,7 +218,6 @@ def main(_):
         run_id = mlflow.active_run().info.run_id
         loss_callback = our_callbacks.LossMonitor(run_id)
         metrics_callback = our_callbacks.MetricsMonitor(run_id)
-        gpu_usage_callback = inductiva_ml.callbacks.GPUUsage(run_id)
         # Early stopping.
         early_stopping_callback = pl_callbacks.EarlyStopping(
             monitor="val_loss",
@@ -229,10 +225,7 @@ def main(_):
             patience=FLAGS.early_stopping_patience,
             mode="min")
 
-        callbacks = [
-            loss_callback, metrics_callback, early_stopping_callback,
-            gpu_usage_callback
-        ]
+        callbacks = [loss_callback, metrics_callback, early_stopping_callback]
 
         if FLAGS.save_model:
             checkpoint_callback = our_callbacks.MlflowBestModelsCheckpoint(

@@ -335,15 +335,17 @@ class VectorDataset(data_utils.Dataset):
     def __getitem__(self, index):
         protein, ligand, affinity = self.data_list[index]
 
+        # pylint: disable=E1102
         protein = torch.nn.functional.pad(
             protein, (0, 0, 0, self.max_len_p - protein.shape[0]),
             mode="constant",
-            value=None)  # pylint: disable=E1102
+            value=None)
 
+        # pylint: disable=E1102
         ligand = torch.nn.functional.pad(
             ligand, (0, 0, 0, self.max_len_l - ligand.shape[0]),
             mode="constant",
-            value=None)  # pylint: disable=E1102
+            value=None)
 
         return [
             torch.flatten(torch.cat((protein, ligand), dim=0).float()),
