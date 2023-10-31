@@ -14,7 +14,6 @@ import mlflow
 import ray_lightning
 import ray
 import random
-import inductiva_ml
 
 FLAGS = flags.FLAGS
 
@@ -58,8 +57,7 @@ flags.DEFINE_list("rotation_angles", [30, 30, 30],
 flags.DEFINE_boolean("comparing_with_mlp", False,
                      "Sanity Check: Compare with MLP")
 flags.DEFINE_bool("shuffle_nodes", False, "Sanity Check: Shuffle nodes")
-flags.DEFINE_bool("remove_coords", False,
-                  "remove coordinates of nodes, only for old dataset")
+flags.DEFINE_bool("include_coords", False, "include coordinates of nodes")
 flags.DEFINE_float("weight_decay", 0, "value of weight decay")
 flags.DEFINE_bool("use_batch_norm", True, "use batch norm")
 flags.DEFINE_enum("which_gnn_model", "GATGNN",
@@ -68,6 +66,12 @@ flags.DEFINE_enum("which_gnn_model", "GATGNN",
 flags.DEFINE_integer("num_processing_steps", 1, "number of processor layers")
 flags.DEFINE_integer("size_processing_steps", 128, "size of processor layers")
 flags.DEFINE_bool("save_model", False, "save best model")
+flags.DEFINE_enum("final_aggregation", "mean", ["mean", "sum"],
+                  "final aggregation of embeddings")
+flags.DEFINE_enum("what_to_aggregate", "both", ["nodes", "edges", "both"],
+                  "choose what to aggregate in the final layers")
+flags.DEFINE_bool("center_coords_in_ligand", False,
+                  "center coordinates on the ligand")
 
 
 def _log_parameters(**kwargs):
@@ -92,21 +96,18 @@ def main(_):
     test_size = len(dataset) - train_size
 
     if FLAGS.normalize_edges:
-        for data in dataset:
-            data.edge_attr[:, -8] = data.edge_attr[:, -8] * 0.1
-            data.edge_attr[:, -6:-3] = data.edge_attr[:, -6:-3] * 0.1
-            data.edge_attr[:, -5] = data.edge_attr[:, -5] * 0.1
-            data.edge_attr[:, -2] = data.edge_attr[:, -2] * 0.1
+        for graph in dataset:
+            graph.edge_attr = graph.edge_attr[:, :14]
 
     # Sanity Check : Shuffling labels
     if FLAGS.shuffle:
         random.seed(FLAGS.shuffling_seed)
-        labels = [data.y for data in dataset]
+        labels = [data.y[0] for data in dataset]
         labels_shuffled = labels.copy()
         random.shuffle(labels_shuffled)
 
         for i in range(len(dataset)):
-            dataset[i].y = labels_shuffled[i]
+            dataset[i].y[0] = labels_shuffled[i]
 
     train_dataset, val_dataset = torch.utils.data.random_split(
         dataset, [train_size, test_size],
@@ -120,9 +121,14 @@ def main(_):
         for i in range(len(dataset)):
             dataset[i].edge_attr = None
 
-    if FLAGS.remove_coords:
-        for i in range(len(dataset)):
-            dataset.remove_coords_from_nodes(i)
+    if FLAGS.center_coords_in_ligand:
+        for graph in dataset:
+            center = graph.pos[graph.x[:, 0] == 1].mean(dim=0)
+            graph.pos = graph.pos - center
+
+    if FLAGS.include_coords:
+        for i, graph in enumerate(dataset):
+            graph.x = torch.cat((graph.x, graph.pos * 0.1), dim=1)
 
     # only for previous representation of graphs
     if FLAGS.sanity_check_rotation:
@@ -148,18 +154,18 @@ def main(_):
         embedding_layer_sizes = list(map(int, FLAGS.embedding_layers))
 
     if FLAGS.which_gnn_model == "GATGNN":
+        num_edge_features = dataset[0].num_edge_features
         model = models.GraphNN(dataset[0].num_node_features, graph_layer_sizes,
                                linear_layer_sizes, FLAGS.use_batch_norm,
                                FLAGS.dropout_rate, embedding_layer_sizes,
                                FLAGS.n_attention_heads)
     elif FLAGS.which_gnn_model == "NodeEdgeGNN":
         num_edge_features = dataset[0].num_edge_features
-        model = models.NodeEdgeGNN(dataset[0].num_node_features,
-                                   num_edge_features, linear_layer_sizes,
-                                   FLAGS.use_batch_norm, FLAGS.dropout_rate,
-                                   embedding_layer_sizes,
-                                   FLAGS.size_processing_steps,
-                                   FLAGS.num_processing_steps)
+        model = models.NodeEdgeGNN(
+            dataset[0].num_node_features, num_edge_features, linear_layer_sizes,
+            FLAGS.use_batch_norm, FLAGS.dropout_rate, embedding_layer_sizes,
+            FLAGS.size_processing_steps, FLAGS.num_processing_steps,
+            FLAGS.final_aggregation, FLAGS.what_to_aggregate)
     elif FLAGS.which_gnn_model == "SeparateEdgesGNN":
         num_edge_features = dataset[0].edge_attr_2.shape[1]
         model = models.SeparateEdgesGNN(
@@ -198,19 +204,20 @@ def main(_):
                         splitting_seed=FLAGS.splitting_seed,
                         dataset=str(FLAGS.path_dataset),
                         shuffle_nodes=FLAGS.shuffle_nodes,
-                        remove_coords=FLAGS.remove_coords,
+                        include_coords=FLAGS.include_coords,
                         comparing_with_mlp=FLAGS.comparing_with_mlp,
                         use_batch_norm=FLAGS.use_batch_norm,
                         which_gnn_model=FLAGS.which_gnn_model,
                         num_processing_steps=FLAGS.num_processing_steps,
                         size_processing_steps=FLAGS.size_processing_steps,
                         max_epochs=FLAGS.max_epochs,
+                        final_aggregation=FLAGS.final_aggregation,
+                        what_to_aggregate=FLAGS.what_to_aggregate,
                         save_model=FLAGS.save_model)
 
         run_id = mlflow.active_run().info.run_id
         loss_callback = our_callbacks.LossMonitor(run_id)
         metrics_callback = our_callbacks.MetricsMonitor(run_id)
-        gpu_usage_callback = inductiva_ml.callbacks.GPUUsage(run_id)
         # Early stopping.
         early_stopping_callback = pl_callbacks.EarlyStopping(
             monitor="val_loss",
@@ -218,10 +225,7 @@ def main(_):
             patience=FLAGS.early_stopping_patience,
             mode="min")
 
-        callbacks = [
-            loss_callback, metrics_callback, early_stopping_callback,
-            gpu_usage_callback
-        ]
+        callbacks = [loss_callback, metrics_callback, early_stopping_callback]
 
         if FLAGS.save_model:
             checkpoint_callback = our_callbacks.MlflowBestModelsCheckpoint(
@@ -246,7 +250,8 @@ def main(_):
         accelerator = "gpu" if FLAGS.use_gpu else None
         trainer = pl.Trainer(max_epochs=FLAGS.max_epochs,
                              accelerator=accelerator,
-                             callbacks=callbacks)
+                             callbacks=callbacks,
+                             log_every_n_steps=50)
 
     trainer.fit(model=lightning_model,
                 train_dataloaders=train_loader,

@@ -76,7 +76,9 @@ def main(_):
                 embedding_layers=string_to_int_list(
                     parameters["embedding_layers"]),
                 latent_size=int(parameters["size_processing_steps"]),
-                num_processing_steps=int(parameters["num_processing_steps"]))
+                num_processing_steps=int(parameters["num_processing_steps"]),
+                final_aggregation=parameters["final_aggregation"],
+                what_to_aggregate=parameters["what_to_aggregate"])
 
         elif parameters["which_gnn_model"] == "SeparateEdgesGNN":
             model = models.SeparateEdgesGNN(
@@ -109,6 +111,7 @@ def main(_):
     lightning_model.eval()
 
     with torch.no_grad():
+        store_concatenation = torch.zeros((0, 2))
         for data in dataset_loader:
             data1 = data.clone()
             predictions = lightning_model.model(
@@ -118,7 +121,10 @@ def main(_):
             labels = data.y[0].unsqueeze(-1)
             concatenation = torch.cat((predictions, labels), dim=1)
 
-            torch.save(concatenation, os.path.join(FLAGS.results_dir, run_name))
+            store_concatenation = torch.cat(
+                (store_concatenation, concatenation), dim=0)
+        torch.save(store_concatenation, os.path.join(FLAGS.results_dir,
+                                                     run_name))
 
 
 if __name__ == "__main__":

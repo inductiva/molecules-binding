@@ -202,7 +202,7 @@ class NodeEdgeGNN(nn.Module):
 
     def __init__(self, num_node_features, num_edge_features, layer_sizes_linear,
                  use_batch_norm, dropout_rate, embedding_layers, latent_size,
-                 num_processing_steps):
+                 num_processing_steps, final_aggregation, what_to_aggregate):
         super().__init__()
 
         if embedding_layers is None:
@@ -223,12 +223,19 @@ class NodeEdgeGNN(nn.Module):
 
         self.processor = NodeEdgeProcessor(latent_size, num_processing_steps)
 
-        self.final_mlp = MLP(latent_size * 2,
+        if what_to_aggregate in ('nodes', 'edges'):
+            beggining_layer = latent_size
+        elif what_to_aggregate == 'both':
+            beggining_layer = latent_size * 2
+
+        self.final_mlp = MLP(beggining_layer,
                              layer_sizes_linear,
                              1,
                              use_batch_norm,
                              dropout_rate,
                              use_final_activation=False)
+        self.final_aggregation = final_aggregation
+        self.what_to_aggregate = what_to_aggregate
 
     def forward(self, data, batch, dropout_rate, use_message_passing):
 
@@ -239,11 +246,22 @@ class NodeEdgeGNN(nn.Module):
         if use_message_passing:
             x, edge_index, edge_attr = self.processor(x, edge_index, edge_attr)
 
-        x_mean = torch_scatter.scatter_mean(x, batch, dim=0)
-        edge_mean = torch_scatter.scatter_mean(edge_attr,
-                                               batch[edge_index[0]],
-                                               dim=0)
-        aggregation = torch.cat([x_mean, edge_mean], dim=1)
+        if self.what_to_aggregate == 'nodes':
+            x_mean = torch_scatter.scatter_mean(x, batch, dim=0)
+            aggregation = x_mean
+
+        elif self.what_to_aggregate == 'edges':
+            edge_mean = torch_scatter.scatter_mean(edge_attr,
+                                                   batch[edge_index[0]],
+                                                   dim=0)
+            aggregation = edge_mean
+        elif self.what_to_aggregate == 'both':
+            x_mean = torch_scatter.scatter_mean(x, batch, dim=0)
+            edge_mean = torch_scatter.scatter_mean(edge_attr,
+                                                   batch[edge_index[0]],
+                                                   dim=0)
+            aggregation = torch.cat([x_mean, edge_mean], dim=1)
+
         aggregation = F.dropout(aggregation,
                                 p=dropout_rate,
                                 training=self.training)
