@@ -1,5 +1,5 @@
 """
-Define class Dataset (replicating Jiang, Dejun, et al. "Interactiongraphnet:
+Define class Dataset (inspired in Jiang, Dejun, et al. "Interactiongraphnet:
 A novel and efficient deep graph representation learning framework for
 accurate protein–ligand interaction predictions." Journal of medicinal
 chemistry 64.24 (2021): 18209-18232.)
