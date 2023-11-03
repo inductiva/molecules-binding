@@ -245,13 +245,13 @@ def main(_):
                              strategy=plugin,
                              logger=False,
                              callbacks=callbacks,
-                             log_every_n_steps=20)
+                             log_every_n_steps=5)
     else:
         accelerator = "gpu" if FLAGS.use_gpu else None
         trainer = pl.Trainer(max_epochs=FLAGS.max_epochs,
                              accelerator=accelerator,
                              callbacks=callbacks,
-                             log_every_n_steps=50)
+                             log_every_n_steps=5)
 
     trainer.fit(model=lightning_model,
                 train_dataloaders=train_loader,
