@@ -11,9 +11,9 @@ MSc Thesis title (Instituto Superior Técnico), Nov. 2023 - Sofia Guerreiro:
 
 ## Running the code
 
-This code was developed using Python version 3.10.12. It is recommended to use the same or a compatible version of Python.
+This code was developed using Python version 3.10. It is recommended to use the same or a compatible version of Python.
 
-If you don't already have Python 3.10.12 installed, you can download it from the [official Python website](https://www.python.org/downloads/release/python-31012/).
+If you don't already have Python 3.10 installed, you can download it from the [official Python website](https://www.python.org/downloads/release/python-31012/).
 
 
 ### Mlflow
