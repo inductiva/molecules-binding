@@ -9,9 +9,7 @@ MSc Thesis title (Instituto Superior Técnico), Nov. 2023 - Sofia Guerreiro:
 
 "Predicting Protein-Ligand Binding Affinity using Graph Neural Networks"
 
-## Running the code
-
-## Python Version
+# Running the code
 
 This code was developed using Python version 3.10.12. It is recommended to use the same or a compatible version of Python.
 
@@ -67,9 +65,9 @@ pip install -e .
 
 ## Processing the dataset
 
-We included a small example dataset, in the directory example_dataset. 
+We included a small example dataset, in the directory `example_dataset`. 
 For using a real dataset, you can download [PDBBind](http://www.pdbbind.org.cn/).
-In this project, mosltly PDBBind general set 2016 was used.
+In this project, the majority of the experiments included PDBBind general set 2016.
 To process the dataset and store it, first create a directory where you want to keep
 stored datasets (e.g., `/datasetsprocessed/`), and then run the script
 `process_dataset_interaction.py`. For instance,
@@ -86,6 +84,8 @@ python scripts/train_graphnet_lightning.py --path_dataset=../datasetsprocessed/e
 ```
 
 You can choose other flags, with different parameters.
+
+## Evaluating the model on a test set
 
 If you choose to save the model, you can later evaluate the performance on other test sets. You can create a directory to store the results (e.g., `/results/`) and rin the script `evaluate_model.py` 
 
