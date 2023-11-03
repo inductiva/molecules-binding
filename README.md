@@ -9,14 +9,14 @@ MSc Thesis title (Instituto Superior Técnico), Nov. 2023 - Sofia Guerreiro:
 
 "Predicting Protein-Ligand Binding Affinity using Graph Neural Networks"
 
-# Running the code
+## Running the code
 
 This code was developed using Python version 3.10.12. It is recommended to use the same or a compatible version of Python.
 
 If you don't already have Python 3.10.12 installed, you can download it from the [official Python website](https://www.python.org/downloads/release/python-31012/).
 
 
-## Mlflow
+### Mlflow
 
 We are using
 [mlflow](https://mlflow.org/docs/latest/python_api/mlflow.html) to
@@ -32,7 +32,7 @@ directory from which the script is launched. To then look at the
 experiments in the browser we just need to run the command `mlflow
 ui`.
 
-## Installing everything
+### Installing everything
 
 The next step is to actually clone the repository using:
 
@@ -63,7 +63,7 @@ Next, because `molecules-binding` is actually packaged we can install it using:
 pip install -e .
 ```
 
-## Processing the dataset
+### Processing the dataset
 
 We included a small example dataset, in the directory `example_dataset`. 
 For using a real dataset, you can download [PDBBind](http://www.pdbbind.org.cn/).
@@ -76,7 +76,7 @@ stored datasets (e.g., `/datasetsprocessed/`), and then run the script
 python scripts/process_dataset_interaction.py --affinity_dir=example_dataset/index/INDEX_general_PL_data.2020 --data_dir=example_dataset/ --path_dataset=../datasetsprocessed/example_data_processed --threshold=8 --which_file_ligand="mol2" --not_include_test_set=True --separate_edges=False
 ```
 
-## Training the model
+### Training the model
 To train a model is simply a matter of running the script `train_graphnet_lightning.py`:
 
 ```bash
@@ -85,9 +85,9 @@ python scripts/train_graphnet_lightning.py --path_dataset=../datasetsprocessed/e
 
 You can choose other flags, with different parameters.
 
-## Evaluating the model on a test set
+### Evaluating the model on a test set
 
-If you choose to save the model, you can later evaluate the performance on other test sets. You can create a directory to store the results (e.g., `/results/`) and rin the script `evaluate_model.py` 
+If you choose to save the model, you can later evaluate the performance on other test sets. You can create a directory to store the results (e.g., `/results/`) and run the script `evaluate_model.py`. For instance, 
 
 ```bash
 python scripts/evaluate_model.py --path_dataset=<Path to the processed dataset to test> --mlflow_server_uri=<your mlflow server ui> --results_dir=../results --run_id=<The run ID where the model was trained>
