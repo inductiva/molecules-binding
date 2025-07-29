@@ -1,4 +1,4 @@
-torch==1.13.1
+torch==2.7.1
 -f https://data.pyg.org/whl/torch-1.13.1+cu117.html
 pyg-lib==0.1.0
 torch-cluster==1.6.0
